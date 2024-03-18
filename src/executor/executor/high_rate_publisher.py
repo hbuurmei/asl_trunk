@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-from interfaces.msg import MotorControl
+from interfaces.msg import MotorControl, MotorStatus
 import math, time
 
 
