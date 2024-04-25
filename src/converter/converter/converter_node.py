@@ -1,15 +1,15 @@
 import rclpy
 from rclpy.node import Node
 from ros_phoenix.msg import MotorControl
-from interfaces.msg import FourMotorsControl
+from interfaces.msg import AllMotorsControl
 
 class MotorControlConverter(Node):
     def __init__(self):
         super().__init__('converter_node')
-        # Subscribe using the FourMotorsControl msg type from the interfaces package
+        # Subscribe using the AllMotorsControl msg type from the interfaces package
         self.subscription = self.create_subscription(
-            FourMotorsControl,
-            '/four_motors_control',
+            AllMotorsControl,
+            '/all_motors_control',
             self.listener_callback,
             10)
 

@@ -24,7 +24,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/FourMotorsControl.msg"
+  "msg/AllMotorsControl.msg"
   "srv/MPCCommand.srv"
 )
 
