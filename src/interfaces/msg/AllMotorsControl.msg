@@ -1,4 +1,4 @@
-# FourMotorsControl.msg
+# AllMotorsControl.msg
 
 # Constants for different control modes
 int32 PERCENT_OUTPUT=0
