@@ -14,7 +14,7 @@ class MotorControlConverter(Node):
             10)
 
         self.publisher = {}
-        for i in range(1, 5):
+        for i in range(1, 6 + 1):  # 6 motors
             topic_name = f'/talon{i}/set'
             self.publisher[i] = self.create_publisher(MotorControl, topic_name, 10)
 
