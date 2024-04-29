@@ -10,7 +10,6 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/executor', ['executor/executor_node.py']),
         ('share/' + package_name + '/executor', ['executor/data_collection_node.py']),
     ],
     install_requires=['setuptools'],
@@ -22,7 +21,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'executor_node = executor.executor_node:main',
             'data_collection_node = executor.data_collection_node:main',
         ],
     },
