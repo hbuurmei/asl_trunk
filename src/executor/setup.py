@@ -10,6 +10,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/executor', ['executor/executor_node.py']),
+        ('share/' + package_name + '/executor', ['executor/data_collection_node.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -20,8 +22,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'high_rate_publisher = executor.high_rate_publisher:main',
             'executor_node = executor.executor_node:main',
+            'data_collection_node = executor.data_collection_node:main',
         ],
     },
 )
