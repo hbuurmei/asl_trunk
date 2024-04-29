@@ -89,7 +89,7 @@ class DataCollectionNode(Node):
             return False
 
     def get_control_inputs(self):
-        csv_file = '../../../data/steady_state/control_inputs.csv'
+        csv_file = '../../../data/trajectories/steady_state/control_inputs.csv'
         with open(csv_file, mode='r') as file:
             csv_reader = csv.reader(file)
             for row in csv_reader:
@@ -107,7 +107,7 @@ class DataCollectionNode(Node):
         }
         
         # Save data to CSV
-        with open('../../data/steady_state_data.csv', 'a', newline='') as file:
+        with open('../../../data/trajectories/steady_state/steady_state_trajectories.csv', 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(self.control_inputs + [average_position['x'], average_position['y'], average_position['z']])
 
