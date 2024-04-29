@@ -1,9 +1,10 @@
+import os
 import csv
 import time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-from interfaces.msg import AllMotorControl, TrunkMarkers
+from interfaces.msg import AllMotorsControl, TrunkMarkers
 
 class DataCollectionNode(Node):
     def __init__(self):
@@ -11,7 +12,7 @@ class DataCollectionNode(Node):
         self.declare_parameters(namespace='', parameters=[
             ('number_of_samples', 10),
             ('update_period', 0.1),  # in [s]
-            ('data_type', 'steady_state')  # 'steady_state' or 'dynamic' TODO: implement dynamic data collection
+            ('data_type', 'steady_state')  # 'steady_state' or 'dynamic' TODO: implement dynamic trajectory data collection
         ])
 
         self.sample_size = self.get_parameter('number_of_samples').value
@@ -22,6 +23,7 @@ class DataCollectionNode(Node):
         self.previous_time = time.time()
         self.current_control_id = -1
         self.control_inputs = None
+        self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
 
         self.subscription_markers = self.create_subscription(
             TrunkMarkers,
@@ -31,7 +33,7 @@ class DataCollectionNode(Node):
         )
 
         self.publisher_ = self.create_publisher(
-            AllMotorControl,
+            AllMotorsControl,
             '/all_motors_control',
             QoSProfile(depth=10)
         )
@@ -44,15 +46,21 @@ class DataCollectionNode(Node):
             self.is_collecting = True
 
             # Publish new motor control data
-            self.control_id = self.control_id + 1
+            self.current_control_id = self.current_control_id + 1
             self.control_inputs = self.get_control_inputs()
-            control_message = AllMotorControl()
-            control_message.modes = [0] * len(self.control_inputs)  # TODO: mode is hardcoded
-            control_message.values = self.control_inputs
-            self.publisher_.publish(control_message)
-            self.get_logger().info('Published new motor control setting: ' + str(self.control_inputs))
+            if self.control_inputs == None:
+                self.get_logger().info('Data collection has finished.')
+                self.destroy_node()
+                rclpy.shutdown()
+            else:
+                control_message = AllMotorsControl()
+                control_message.modes = [0] * len(self.control_inputs)  # TODO: mode is hardcoded
+                control_message.values = self.control_inputs
+                self.publisher_.publish(control_message)
+                self.get_logger().info('Published new motor control setting: ' + str(self.control_inputs))
 
         if self.is_collecting and (time.time() - self.previous_time) >= self.update_period:
+            self.previous_time = time.time()
             if self.check_settled():
                 self.stored_markers.append(msg.translations[0])  # TODO: single marker is hardcoded
                 if len(self.stored_markers) >= self.sample_size:
@@ -89,12 +97,14 @@ class DataCollectionNode(Node):
             return False
 
     def get_control_inputs(self):
-        csv_file = '../../../data/trajectories/steady_state/control_inputs.csv'
-        with open(csv_file, mode='r') as file:
+        control_inputs = None
+        control_input_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/control_inputs.csv')
+        with open(control_input_csv_file, mode='r') as file:
             csv_reader = csv.reader(file)
+            next(csv_reader, None)  # skip the header row
             for row in csv_reader:
                 if int(row[0]) == self.current_control_id:
-                    control_inputs = [int(u) for u in row[1:]]
+                    control_inputs = [float(u) for u in row[1:]]
                     break
         return control_inputs
 
@@ -107,7 +117,8 @@ class DataCollectionNode(Node):
         }
         
         # Save data to CSV
-        with open('../../../data/trajectories/steady_state/steady_state_trajectories.csv', 'a', newline='') as file:
+        trajectory_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/steady_state_trajectories.csv')
+        with open(trajectory_csv_file, 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(self.control_inputs + [average_position['x'], average_position['y'], average_position['z']])
 
