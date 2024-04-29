@@ -69,7 +69,7 @@ class DataCollectionNode(Node):
             else:
                 self.check_settled_markers.append(msg.translations[0])
 
-    def check_settled(self, tolerance=0.01, marker_window=5):
+    def check_settled(self, tolerance=0.005, marker_window=5):
         if len(self.check_settled_markers) < marker_window:
             # Not enough markers to determine if settled
             return False
@@ -121,6 +121,7 @@ class DataCollectionNode(Node):
         with open(trajectory_csv_file, 'a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(self.control_inputs + [average_position['x'], average_position['y'], average_position['z']])
+        self.get_logger().info('Stored new sample with marker position: ' + str(average_position) + ' [m].')
 
 def main(args=None):
     rclpy.init(args=args)
