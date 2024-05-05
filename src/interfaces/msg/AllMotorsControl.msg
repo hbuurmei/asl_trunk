@@ -1,18 +1,2 @@
-# AllMotorsControl.msg
-
-# Constants for different control modes
-int32 PERCENT_OUTPUT=0
-int32 POSITION=1
-int32 VELOCITY=2
-int32 CURRENT=3
-int32 FOLLOWER=5
-int32 MOTION_PROFILE=6
-int32 MOTION_MAGIC=7
-int32 MOTION_PROFILE_ARC=10
-int32 DISABLED=15
-
-# Array of control modes for multiple motors
-int32[] modes
-
-# Array of control values corresponding to each mode in `modes`
-float64[] values
+# Array with control inputs for each motor
+SingleMotorControl[] motors_control

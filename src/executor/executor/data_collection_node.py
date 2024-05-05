@@ -4,7 +4,7 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-from interfaces.msg import AllMotorsControl, TrunkMarkers
+from interfaces.msg import SingleMotorControl, AllMotorsControl, TrunkMarkers
 
 class DataCollectionNode(Node):
     def __init__(self):
@@ -32,7 +32,7 @@ class DataCollectionNode(Node):
             QoSProfile(depth=10)
         )
 
-        self.publisher_ = self.create_publisher(
+        self.controls_publisher = self.create_publisher(
             AllMotorsControl,
             '/all_motors_control',
             QoSProfile(depth=10)
@@ -54,9 +54,14 @@ class DataCollectionNode(Node):
                 rclpy.shutdown()
             else:
                 control_message = AllMotorsControl()
-                control_message.modes = [0] * len(self.control_inputs)  # TODO: mode is hardcoded
-                control_message.values = self.control_inputs
-                self.publisher_.publish(control_message)
+                list_single_motor_control = []
+                for i in range(len(self.control_inputs)):
+                    single_motor_control = SingleMotorControl()
+                    single_motor_control.mode = 0  # TODO: mode is hardcoded, should be a set parameter as well
+                    single_motor_control.value = self.control_inputs[i]
+                    list_single_motor_control.append(single_motor_control)
+                control_message.motors_control = list_single_motor_control
+                self.controls_publisher.publish(control_message)
                 self.get_logger().info('Published new motor control setting: ' + str(self.control_inputs))
 
         if self.is_collecting and (time.time() - self.previous_time) >= self.update_period:
