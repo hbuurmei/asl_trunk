@@ -17,7 +17,6 @@ class ConverterNode(Node):
                 '/rigid_bodies',
                 self.rigid_body_callback,
                 10)
-        
         elif self.type == 'markers':
             self.publisher = self.create_publisher(TrunkMarkers, '/trunk_markers', 10)
             self.subscription = self.create_subscription(
@@ -25,6 +24,11 @@ class ConverterNode(Node):
                 '/markers',
                 self.marker_callback,
                 10)
+        else:
+            self.get_logger().error('Invalid type parameter. Choose from {markers, rigid_bodies}. Exiting...')
+            self.destroy_node()
+            rclpy.shutdown()
+            return
         self.get_logger().info('Mocap converter node has started.')
 
     def marker_callback(self, msg):
