@@ -4,7 +4,7 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-from interfaces.msg import SingleMotorControl, AllMotorsControl, TrunkMarkers
+from interfaces.msg import SingleMotorControl, AllMotorsControl, TrunkMarkers, TrunkRigidBodies
 
 class DataCollectionNode(Node):
     def __init__(self):
