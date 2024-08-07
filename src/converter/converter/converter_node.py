@@ -1,7 +1,7 @@
-import rclpy
-from rclpy.node import Node
+import rclpy  # type: ignore
+from rclpy.node import Node  # type: ignore
 from interfaces.msg import TrunkMarkers, TrunkRigidBodies
-from mocap4r2_msgs.msg import Markers, RigidBodies
+from mocap4r2_msgs.msg import Markers, RigidBodies  # type: ignore
 
 class ConverterNode(Node):
     def __init__(self):
