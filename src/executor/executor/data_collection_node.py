@@ -24,7 +24,7 @@ class DataCollectionNode(Node):
             ('number_of_samples', 10),
             ('update_period', 0.1),  # in [s]
             ('data_type', 'steady_state'),  # 'steady_state' or 'dynamic' TODO: implement dynamic trajectory data collection
-            ('mocap_type', 'rigid_bodies')  # 'rigid_bodies' or 'markers'
+            ('mocap_type', 'rigid_bodies'),  # 'rigid_bodies' or 'markers'
             ('control_type', 'output')  # 'output' or 'position'
         ])
 
