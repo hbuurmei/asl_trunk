@@ -41,7 +41,7 @@ class MotorControlConverter(Node):
 
     def execute_controls_callback(self, msg):
         # Iterate through each motor's mode and value and publish them individually
-        for i, single_motor_control in enumerate(msg, start=1):
+        for i, single_motor_control in enumerate(msg.motors_control, start=1):
             new_msg = MotorControl()
             new_msg.mode = single_motor_control.mode
             new_msg.value = single_motor_control.value
