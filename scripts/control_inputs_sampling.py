@@ -20,9 +20,10 @@ for i, control_var in enumerate(control_variables):
         values = np.zeros(num_controls)
         t = np.linspace(0, 2 * np.pi, points_per_period)
         values[i] = amplitude * np.sin(t[j])
-        df = df.append(dict(zip(['ID'] + control_variables, [j + i * points_per_period] + list(values))), ignore_index=True)
+        df = df._append(dict(zip(['ID'] + control_variables, [j + i * points_per_period] + list(values))), ignore_index=True)
 
 # Save to CSV
+df['ID'] = df['ID'].astype(int)
 df.to_csv(control_inputs_file, index=False)
 
 print(f'Control inputs have been saved to {control_inputs_file}')
