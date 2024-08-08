@@ -1,5 +1,5 @@
-import rclpy
-from rclpy.node import Node
+import rclpy  # type: ignore
+from rclpy.node import Node  # type: ignore
 from ros_phoenix.msg import MotorControl, MotorStatus
 from interfaces.msg import SingleMotorControl, AllMotorsControl, SingleMotorStatus, AllMotorsStatus
 
