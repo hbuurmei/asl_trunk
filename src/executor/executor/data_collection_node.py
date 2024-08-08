@@ -125,23 +125,31 @@ class DataCollectionNode(Node):
             # Not enough positions to determine if settled
             return False
 
-        min_position = {'x': float('inf'), 'y': float('inf'), 'z': float('inf')}
-        max_position = {'x': float('-inf'), 'y': float('-inf'), 'z': float('-inf')}
+        num_positions = len(self.check_settled_positions[0])  # usually 3 (rigid bodies) for the trunk robot
+        
+        min_positions = [{'x': float('inf'), 'y': float('inf'), 'z': float('inf')} for _ in range(num_positions)]
+        max_positions = [{'x': float('-inf'), 'y': float('-inf'), 'z': float('-inf')} for _ in range(num_positions)]
+        
         recent_positions = self.check_settled_positions[-window:]
+        
         for pos_list in recent_positions:
-            for pos in pos_list:
-                min_position['x'] = min(min_position['x'], pos.x)
-                max_position['x'] = max(max_position['x'], pos.x)
-                min_position['y'] = min(min_position['y'], pos.y)
-                max_position['y'] = max(max_position['y'], pos.y)
-                min_position['z'] = min(min_position['z'], pos.z)
-                max_position['z'] = max(max_position['z'], pos.z)
+            for idx, pos in enumerate(pos_list):
+                min_positions[idx]['x'] = min(min_positions[idx]['x'], pos.x)
+                max_positions[idx]['x'] = max(max_positions[idx]['x'], pos.x)
+                min_positions[idx]['y'] = min(min_positions[idx]['y'], pos.y)
+                max_positions[idx]['y'] = max(max_positions[idx]['y'], pos.y)
+                min_positions[idx]['z'] = min(min_positions[idx]['z'], pos.z)
+                max_positions[idx]['z'] = max(max_positions[idx]['z'], pos.z)
 
-        range_x = max_position['x'] - min_position['x']
-        range_y = max_position['y'] - min_position['y']
-        range_z = max_position['z'] - min_position['z']
+        for idx in range(num_positions):
+            range_x = max_positions[idx]['x'] - min_positions[idx]['x']
+            range_y = max_positions[idx]['y'] - min_positions[idx]['y']
+            range_z = max_positions[idx]['z'] - min_positions[idx]['z']
+            
+            if range_x > tolerance or range_y > tolerance or range_z > tolerance:
+                return False
 
-        return range_x <= tolerance and range_y <= tolerance and range_z <= tolerance
+        return True
 
 
     def process_data(self, names):
