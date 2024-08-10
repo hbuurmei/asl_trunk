@@ -10,7 +10,7 @@ theme:
 
 nav:
   - Home: index.md
-  - Website Contributions: website_contributions.md
+  - Contributing: contributing.md
 
 extra_css:
   - stylesheets/extra.css
