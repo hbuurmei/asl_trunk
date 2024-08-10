@@ -11,7 +11,7 @@ where the GitHub CLI is required to use the `gh` command (I highly recommend it)
 
 ## Project layout
 The project is organized as follows:
-    
+```{ .no-copy }
     asl_trunk/
         README.md  # The project README file.
         asl_trunk/  # The main package.
@@ -24,6 +24,7 @@ The project is organized as follows:
                 index.md  # The documentation homepage.
                 contributing.md  # This file.
                 ...       # Other markdown pages, images and other files.
+```
 
 ## Code contributions
 All the ROS2 packages are located in the `asl_trunk/` directory, and each workspace is their own repository.

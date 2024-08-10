@@ -11,12 +11,15 @@ theme:
     - content.code.copy
 nav:
   - Home: index.md
+  - Design: design.md
   - Motion Capture: mocap.md
   - Motor Control: motor_control.md
+  - Collecting data: collecting_data.md
   - Contributing: contributing.md
 extra_css:
   - stylesheets/extra.css
 markdown_extensions:
+  - attr_list
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
