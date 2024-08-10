@@ -5,3 +5,6 @@ WIP!
 Some details on the design/features of the robot.
 
 Ideally a picture as well. May need to be re-taken.
+
+
+## Using the Trunk robot
