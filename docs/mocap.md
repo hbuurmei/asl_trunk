@@ -1,7 +1,25 @@
 # Motion Capture System
 
 
-The motion capture setup consists of the following components:
+## Usage
+First, make sure the robot is turned on.
+The motion capture cameras should show numbers 1-4.
+The Windows laptop has to be connected to the OptiHub via USB, and be running the [Motive 2](https://docs.optitrack.com/v/v2.3) software.
+Then, on the remote computer run the following command:
+```bash
+cd mocap_ws
+source install/setup.bash
+ros2 launch mocap4r2_optitrack_driver optitrack2.launch.py
+```
+and in a new terminal run:
+```bash
+cd mocap_ws
+source install/setup.bash
+ros2 lifecycle set /mocap4r2_optitrack_driver_node activate
+ros2 run converter converter_node
+```
+You can choose whether to use *markers* or *rigid bodies* by changing the `type` parameter, i.e.
+```bash
+ros2 run converter converter_node --ros-args -p type:='markers'  # or 'rigid_bodies' (default)
+```
 
-- **Optitrack cameras**: The system is used to track the position and orientation of the robot in real-time. The system consists of multiple cameras that track the position of reflective markers on the robot. The data is then sent to a computer running the OptiTrack software, which processes the data and sends it to the robot.
-- **OptiHub**: Hub connecting it all.

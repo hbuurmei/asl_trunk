@@ -5,7 +5,7 @@ The motor controllers are connected to the Raspberry Pi 4 (4GB RAM), which has U
 In the first terminal, run:
 ```bash
 cd Phoenix-Linux-SocketCAN-Example
-sudo ./canableStart.sh  # Start the CANable interface
+sudo ./canableStart.sh  # start the CANable interface
 cd ../motor_control_ws
 source install/setup.bash
 ros2 launch ros_phoenix trunk.launch.py
