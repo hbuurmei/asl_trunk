@@ -1,0 +1,4 @@
+site_name: ASL Trunk robot
+site_url: https://hbuurmei.github.io/asl_trunk
+theme:
+  name: material
