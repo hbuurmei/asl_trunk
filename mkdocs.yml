@@ -22,6 +22,7 @@ nav:
   - Motion Capture: mocap.md
   - Motor Control: motor_control.md
   - Collecting data: collecting_data.md
+  - Streaming: streaming.md
   - Contributing: contributing.md
 
 markdown_extensions:
