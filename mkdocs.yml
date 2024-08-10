@@ -1,6 +1,7 @@
 site_name: ASL Trunk robot
 site_description: ASL Trunk robot documentation
 site_url: https://hbuurmei.github.io/asl_trunk
+
 theme:
   name: material
   favicon: assets/favicon-robot.png
@@ -9,6 +10,9 @@ theme:
     primary: custom
   features:
     - content.code.copy
+extra_css:
+  - stylesheets/extra.css
+
 nav:
   - Home: index.md
   - Design: design.md
@@ -16,8 +20,7 @@ nav:
   - Motor Control: motor_control.md
   - Collecting data: collecting_data.md
   - Contributing: contributing.md
-extra_css:
-  - stylesheets/extra.css
+
 markdown_extensions:
   - attr_list
   - pymdownx.highlight:
@@ -27,3 +30,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
