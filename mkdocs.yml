@@ -42,5 +42,3 @@ extra_javascript:
 plugins:
   - git-committers:
       repository: hbuurmei/asl_trunk
-      branch: main
-      enabled: true
