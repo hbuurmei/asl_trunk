@@ -1,2 +1,2 @@
 # asl_trunk
-This is the documentation website for the ASL Trunk robot.
+Welcome to the ASL Trunk robot repository, which includes documentation and source code.
