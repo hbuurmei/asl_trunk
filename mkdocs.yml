@@ -5,7 +5,12 @@ theme:
   name: material
   favicon: favicon-robot.png
   logo: ASL_Logo_White.png
+  palette:
+    primary: custom
 
 nav:
   - Home: index.md
   - Website Contributions: website_contributions.md
+
+extra_css:
+  - stylesheets/extra.css
