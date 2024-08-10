@@ -18,7 +18,7 @@ and select the appropriate topic to view the video stream, e.g. `/image/theora`.
 
 ## Re-installing
 For instance, [this tutorial](https://medium.com/swlh/raspberry-pi-ros-2-camera-eef8f8b94304) can be followed to re-install the camera driver.
-However, note that we installed Ubuntu 20.04 on the PI, not Raspberry PI OS (previously Raspbian), such that the ROS2 installation is different (much simpler).
+However, note that we installed Ubuntu 20.04 on the Pi, not Raspberry Pi OS (previously Raspbian), such that the ROS2 installation is different (much simpler).
 Specifically, once ROS2 is installed, the following commands can be used to install the camera packages:
 ```bash
 mkdir -p Documents/cam_ws/src && cd Documents/cam_ws/src
