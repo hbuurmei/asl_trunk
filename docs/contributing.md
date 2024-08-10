@@ -28,7 +28,7 @@ The project is organized as follows:
 ## Code contributions
 All the ROS2 packages are located in the `asl_trunk/` directory, and each workspace is their own repository.
 These are added via git subtrees to have everything in one place.
-Therefore, just contribute to the respective workspace repository, which will most likely be the [asl_trunk_ws](https://github.com/hbuurmei/asl_trunk_ws) workspace.
+Therefore, just contribute to the respective workspace repository, which will most likely be the [asl_trunk_ws](https://github.com/hbuurmei/asl_trunk_ws) repository.
 Afterwards, the main repository can be updated with the new changes using the following command:
 ```bash
 git subtree pull --prefix=asl_trunk/asl_trunk_ws https://github.com/hbuurmei/asl_trunk_ws.git main

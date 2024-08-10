@@ -7,10 +7,20 @@ theme:
   logo: ASL_Logo_White.png
   palette:
     primary: custom
-
+  features:
+    - content.code.copy
 nav:
   - Home: index.md
+  - Motion Capture: mocap.md
+  - Motor Control: motor_control.md
   - Contributing: contributing.md
-
 extra_css:
   - stylesheets/extra.css
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
