@@ -3,8 +3,8 @@ site_description: ASL Trunk robot documentation
 site_url: https://hbuurmei.github.io/asl_trunk
 theme:
   name: material
-  favicon: favicon-robot.png
-  logo: ASL_Logo_White.png
+  favicon: assets/favicon-robot.png
+  logo: assets/asl-white.png
   palette:
     primary: custom
   features:
