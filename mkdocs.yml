@@ -1,4 +1,11 @@
 site_name: ASL Trunk robot
+site_description: ASL Trunk robot documentation
 site_url: https://hbuurmei.github.io/asl_trunk
 theme:
   name: material
+  favicon: favicon-robot.png
+  logo: ASL_Logo_White.png
+
+nav:
+  - Home: index.md
+  - Website Contributions: website_contributions.md
