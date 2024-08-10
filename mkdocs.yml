@@ -1,4 +1,5 @@
 site_name: ASL Trunk robot
+repo_url: https://github.com/hbuurmei/asl_trunk
 site_description: ASL Trunk robot documentation
 site_url: https://hbuurmei.github.io/asl_trunk
 
