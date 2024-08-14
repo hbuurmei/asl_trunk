@@ -19,7 +19,7 @@ To subscribe to the video stream, run the following command on the remote comput
 ros2 run rqt_image_view rqt_image_view
 ```
 and select the appropriate topic to view the video stream, e.g. `/image/theora`.
-This can also done directly with all the other data, see also the [telemetry viewer](telemetry_viewer.md) page.
+This can also be viewed directly with all the other data, as described in the [telemetry viewer](telemetry_viewer.md) page.
 
 ## Re-installing
 For instance, [this tutorial](https://medium.com/swlh/raspberry-pi-ros-2-camera-eef8f8b94304) can be followed to re-install the camera driver.
