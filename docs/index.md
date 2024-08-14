@@ -6,6 +6,7 @@ This documentation provides a detailed guide to the setup, configuration, and us
 - Motor Control: Instructions for enabling motor control of the Trunk Robot.
 - Collecting Data: Instructions for collecting data using the Trunk Robot, including data collection scripts and procedures.
 - Video Streaming: Instructions for using the video streaming capabilities of the Trunk Robot.
+- Telemetry Viewer: Description on how to view and visualize telemetry data.
 - Contributing: Guidelines for contributing to the development of the Trunk Robot project.
 
 This documentation is intended as a practical resource to support your work with the Trunk Robot, ensuring that all ASL members have access to the necessary information to effectively manage the system.
