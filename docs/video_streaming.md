@@ -4,7 +4,7 @@ The Trunk robot is equipped with a camera that can be used to stream video data 
 ## Usage
 To start the video stream, run the following command on the PI:
 ```bash
-cd mocap_ws
+cd cam_ws
 source install/setup.bash
 ros2 run v4l2_camera v4l2_camera_node
 ```
@@ -19,6 +19,7 @@ To subscribe to the video stream, run the following command on the remote comput
 ros2 run rqt_image_view rqt_image_view
 ```
 and select the appropriate topic to view the video stream, e.g. `/image/theora`.
+This can also done directly with all the other data, see also the [telemetry viewer](telemetry_viewer.md) page.
 
 ## Re-installing
 For instance, [this tutorial](https://medium.com/swlh/raspberry-pi-ros-2-camera-eef8f8b94304) can be followed to re-install the camera driver.
