@@ -13,13 +13,13 @@ def save_to_csv(df, control_inputs_file):
 def sinusoidal_sampling(control_variables):
     num_controls = len(control_variables)
     control_inputs_df = pd.DataFrame(columns=['ID'] + control_variables)
-    points_per_period = 13
-    amplitude = 0.25
+    points_per_period = 15
+    amplitude = 0.30
     
     for i in range(len(control_variables)):
         for j in range(points_per_period):
             values = np.zeros(num_controls)
-            t = np.linspace(0, 2 * np.pi, points_per_period)
+            t = np.pi/8 * np.arange(1, points_per_period + 1)
             values[i] = amplitude * np.sin(t[j])
             control_inputs_df = control_inputs_df._append(dict(zip(['ID'] + control_variables, [j + i * points_per_period] + list(values))), ignore_index=True)
     
@@ -28,9 +28,9 @@ def sinusoidal_sampling(control_variables):
 
 def uniform_sampling(control_variables):
     control_inputs_df = pd.DataFrame(columns=['ID'] + control_variables)
-    tip_range = 0.35
-    mid_range = 0.3
-    base_range = 0.25
+    tip_range = 0.15
+    mid_range = 0.15
+    base_range = 0.2
     ranges = [np.linspace(-val, val, 3) for val in [tip_range, mid_range, base_range]*2]
 
     combinations = list(product(*ranges))
@@ -44,7 +44,7 @@ def uniform_sampling(control_variables):
 def main(sampling_type='uniform'):
     control_variables = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6']
     data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
-    control_inputs_file = os.path.join(data_dir, 'trajectories/steady_state/control_inputs.csv')
+    control_inputs_file = os.path.join(data_dir, f'trajectories/steady_state/control_inputs_{sampling_type}.csv')
     
     if sampling_type=='sinusoidal':
         control_inputs_df = sinusoidal_sampling(control_variables)
@@ -57,4 +57,5 @@ def main(sampling_type='uniform'):
 
 
 if __name__ == '__main__':
-    main()
+    sampling_type = 'uniform'  # or 'sinusoidal'
+    main(sampling_type)

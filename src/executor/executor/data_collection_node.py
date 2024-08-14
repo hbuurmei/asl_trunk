@@ -40,7 +40,7 @@ class DataCollectionNode(Node):
         self.control_inputs = None
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
 
-        control_input_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/control_inputs.csv')
+        control_input_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/control_inputs_uniform.csv')
         self.control_inputs_dict = load_control_inputs(control_input_csv_file)
 
         if self.mocap_type == 'markers':
@@ -161,7 +161,7 @@ class DataCollectionNode(Node):
         ]
 
         # Populate the header row of the CSV file with states if it does not exist
-        trajectory_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/steady_state_trajectories.csv')
+        trajectory_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/steady_state.csv')
         if not os.path.exists(trajectory_csv_file):
             header = [f'{axis}{name}' for name in names for axis in ['x', 'y', 'z']]
             with open(trajectory_csv_file, 'w', newline='') as file:
