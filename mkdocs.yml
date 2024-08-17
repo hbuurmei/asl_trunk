@@ -21,8 +21,8 @@ nav:
   - Motion Capture: mocap.md
   - Motor Control: motor_control.md
   - Collecting data: collecting_data.md
-  - Video Streaming: video_streaming.md
-  - Telemetry Viewer: telemetry_viewer.md
+    - Video Streaming: video_streaming.md
+    - Telemetry Viewer: telemetry_viewer.md
   - Contributing: contributing.md
 
 markdown_extensions:
