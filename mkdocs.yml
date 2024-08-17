@@ -18,10 +18,19 @@ extra_css:
 
 nav:
   - Introduction: index.md
-  - Motion Capture: mocap.md
-  - Motor Control: motor_control.md
-  - Collecting data: collecting_data.md
-  - Telem:
+  - Design: 
+    - Mechanical: mechanical_design.md 
+    - Electrical: electrical_design.md 
+    - Software: software_design.md 
+  - Robot Setup:
+    - 3D Printing: 3dprinting.md 
+    - Electrical Wiring: electrical_wiring.md 
+    - Tendon Routing: tendon_routing.md 
+    - Motive: motive_setup.md 
+  - Usage:
+    - Motion Capture: mocap.md
+    - Motor Control: motor_control.md
+    - Collecting data: collecting_data.md
     - Video Streaming: video_streaming.md
     - Telemetry Viewer: telemetry_viewer.md
   - Contributing: contributing.md
