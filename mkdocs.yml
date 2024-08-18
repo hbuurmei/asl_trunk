@@ -26,7 +26,7 @@ nav:
     - 3D Printing: 3dprinting.md 
     - Electrical Wiring: electrical_wiring.md 
     - Tendon Routing: tendon_routing.md 
-    - Motive: motive_setup.md 
+    - OpiTrack System: optitrack.md 
   - Usage:
     - Motion Capture: mocap.md
     - Motor Control: motor_control.md
