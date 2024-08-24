@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'mpc_solver'
+package_name = 'controller'
 
 setup(
     name=package_name,
@@ -20,7 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'mpc_solver_node = mpc_solver.mpc_solver_node:main',
+            'ik_solver_node = controller.ik_solver_node:main',
+            'lqr_solver_node = controller.lqr_solver_node:main',
+            'mpc_solver_node = controller.mpc_solver_node:main',
         ],
     },
 )
