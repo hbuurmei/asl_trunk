@@ -6,6 +6,7 @@ from rclpy.node import Node  # type: ignore
 from rclpy.qos import QoSProfile  # type: ignore
 from interfaces.msg import SingleMotorControl, AllMotorsControl, TrunkMarkers, TrunkRigidBodies
 
+
 def load_control_inputs(control_input_csv_file):
     control_inputs_dict = {}
     with open(control_input_csv_file, mode='r') as file:
@@ -17,15 +18,16 @@ def load_control_inputs(control_input_csv_file):
             control_inputs_dict[control_id] = control_inputs
     return control_inputs_dict
 
+
 class DataCollectionNode(Node):
     def __init__(self):
         super().__init__('data_collection_node')
         self.declare_parameters(namespace='', parameters=[
-            ('number_of_samples', 10),
-            ('update_period', 0.1),  # in [s]
-            ('data_type', 'steady_state'),  # 'steady_state' or 'dynamic' TODO: implement dynamic trajectory data collection
-            ('mocap_type', 'rigid_bodies'),  # 'rigid_bodies' or 'markers'
-            ('control_type', 'output')  # 'output' or 'position'
+            ('number_of_samples', 10),          # for checking settling condition and averaging (steady state)
+            ('update_period', 0.1),             # in [s]
+            ('data_type', 'steady_state'),      # 'steady_state' or 'dynamic'
+            ('mocap_type', 'rigid_bodies'),     # 'rigid_bodies' or 'markers'
+            ('control_type', 'output')          # 'output' or 'position'
         ])
 
         self.sample_size = self.get_parameter('number_of_samples').value
