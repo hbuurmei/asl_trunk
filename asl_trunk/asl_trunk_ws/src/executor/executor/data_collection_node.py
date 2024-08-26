@@ -42,7 +42,12 @@ class DataCollectionNode(Node):
         self.control_inputs = None
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
 
-        control_input_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/control_inputs_uniform.csv')
+        if self.data_type == 'steady_state':
+            control_input_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/control_inputs_uniform.csv')
+        elif self.data_type == 'dynamic':
+            control_input_csv_file = os.path.join(self.data_dir, 'trajectories/dynamic/control_inputs_uniform.csv')
+        else:
+            raise ValueError('Invalid data type: ' + self.data_type + '. Valid options are: "steady_state" or "dynamic".')
         self.control_inputs_dict = load_control_inputs(control_input_csv_file)
 
         if self.mocap_type == 'markers':
@@ -75,7 +80,7 @@ class DataCollectionNode(Node):
             self.check_settled_positions = []
             self.is_collecting = True
 
-            # Publish new motor control data
+            # Publish new motor control inputs
             self.current_control_id += 1
             self.control_inputs = self.control_inputs_dict.get(self.current_control_id)
             if self.control_inputs is None:
@@ -85,18 +90,30 @@ class DataCollectionNode(Node):
             else:
                 self.publish_control_inputs()
 
-        if self.is_collecting and (time.time() - self.previous_time) >= self.update_period:
-            self.previous_time = time.time()
-            if self.check_settled():
-                # Store positions
+        if self.data_type == 'steady_state':
+            if self.is_collecting and (time.time() - self.previous_time) >= self.update_period:
+                self.previous_time = time.time()
+                if self.check_settled():
+                    # Store positions
+                    self.store_positions(msg)
+                    if len(self.stored_positions) >= self.sample_size:
+                        # Data collection is complete and ready to be processed
+                        self.is_collecting = False
+                        names = self.extract_names(msg)
+                        self.process_data(names)
+                else:
+                    self.check_settled_positions.append(self.extract_positions(msg))
+        elif self.data_type == 'dynamic':
+            if self.is_collecting:
                 self.store_positions(msg)
+                names = self.extract_names(msg)
+                self.process_data(names)
+                # Check settled because then the data collection is complete
                 if len(self.stored_positions) >= self.sample_size:
                     # Data collection is complete and ready to be processed
                     self.is_collecting = False
                     names = self.extract_names(msg)
                     self.process_data(names)
-            else:
-                self.check_settled_positions.append(self.extract_positions(msg))
 
     def publish_control_inputs(self):
         control_message = AllMotorsControl()
