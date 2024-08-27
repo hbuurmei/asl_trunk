@@ -25,6 +25,7 @@ class DataCollectionNode(Node):
         self.declare_parameters(namespace='', parameters=[
             ('number_of_samples', 10),          # for checking settling condition and averaging (steady state)
             ('update_period', 0.1),             # in [s]
+            ('max_traj_length', 500),           # maximum number of samples in a dynamic trajectory
             ('data_type', 'steady_state'),      # 'steady_state' or 'dynamic'
             ('mocap_type', 'rigid_bodies'),     # 'rigid_bodies' or 'markers'
             ('control_type', 'output')          # 'output' or 'position'
@@ -32,6 +33,7 @@ class DataCollectionNode(Node):
 
         self.sample_size = self.get_parameter('number_of_samples').value
         self.update_period = self.get_parameter('update_period').value
+        self.max_traj_length = self.get_parameter('max_traj_length').value
         self.data_type = self.get_parameter('data_type').value
         self.mocap_type = self.get_parameter('mocap_type').value
         self.control_type = self.get_parameter('control_type').value
@@ -106,14 +108,13 @@ class DataCollectionNode(Node):
         elif self.data_type == 'dynamic':
             if self.is_collecting:
                 self.store_positions(msg)
-                names = self.extract_names(msg)
-                self.process_data(names)
-                # Check settled because then the data collection is complete
-                if len(self.stored_positions) >= self.sample_size:
-                    # Data collection is complete and ready to be processed
+                # Check settled because then the dynamic trajectory is done and we can continue
+                if self.check_settled() or len(self.stored_positions) >= self.max_traj_length:
                     self.is_collecting = False
                     names = self.extract_names(msg)
                     self.process_data(names)
+                else:
+                    self.check_settled_positions.append(self.extract_positions(msg))
 
     def publish_control_inputs(self):
         control_message = AllMotorsControl()
@@ -172,26 +173,34 @@ class DataCollectionNode(Node):
 
 
     def process_data(self, names):
-        # Take average positions over all stored samples
-        average_positions = [
-            sum(coords) / len(self.stored_positions)
-            for pos_list in zip(*self.stored_positions)
-            for coords in zip(*[(pos.x, pos.y, pos.z) for pos in pos_list])
-        ]
-
         # Populate the header row of the CSV file with states if it does not exist
-        trajectory_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/steady_state.csv')
+        trajectory_csv_file = os.path.join(self.data_dir, f'trajectories/{self.data_type}/observations.csv')
         if not os.path.exists(trajectory_csv_file):
-            header = [f'{axis}{name}' for name in names for axis in ['x', 'y', 'z']]
+            header = ['ID'] + [f'{axis}{name}' for name in names for axis in ['x', 'y', 'z']]
             with open(trajectory_csv_file, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(header)
-
-        # Save data to CSV
-        with open(trajectory_csv_file, 'a', newline='') as file:
-            writer = csv.writer(file)            
-            writer.writerow(average_positions)
-        self.get_logger().info('Stored new sample with positions: ' + str(average_positions) + ' [m].')
+        
+        if self.data_type == 'steady_state':
+            # Take average positions over all stored samples
+            average_positions = [
+                sum(coords) / len(self.stored_positions)
+                for pos_list in zip(*self.stored_positions)
+                for coords in zip(*[(pos.x, pos.y, pos.z) for pos in pos_list])
+            ]
+            # Save data to CSV
+            with open(trajectory_csv_file, 'a', newline='') as file:
+                writer = csv.writer(file)            
+                writer.writerow(average_positions)
+            self.get_logger().info('Stored new sample with positions: ' + str(average_positions) + ' [m].')
+        elif self.data_type == 'dynamic':
+            # Store all positions in a CSV file
+            with open(trajectory_csv_file, 'a', newline='') as file:
+                writer = csv.writer(file)
+                for pos_list in self.stored_positions:
+                    row = [self.current_control_id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]]
+                    writer.writerow(row)
+            self.get_logger().info(f'Stored the data corresponding to the {self.current_control_id}th trajectory.')
 
 
 def main(args=None):
