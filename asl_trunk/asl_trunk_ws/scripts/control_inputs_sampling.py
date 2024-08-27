@@ -56,6 +56,6 @@ def main(data_type='dynamic', sampling_type='uniform'):
 
 
 if __name__ == '__main__':
-    data_type = 'dynamic'  # 'steady_state' or 'dynamic'
-    sampling_type = 'uniform'  # 'uniform' or 'sinusoidal'
+    data_type = 'dynamic'       # 'steady_state' or 'dynamic'
+    sampling_type = 'uniform'   # 'uniform' or 'sinusoidal'
     main(data_type, sampling_type)
