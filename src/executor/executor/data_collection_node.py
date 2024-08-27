@@ -23,20 +23,22 @@ class DataCollectionNode(Node):
     def __init__(self):
         super().__init__('data_collection_node')
         self.declare_parameters(namespace='', parameters=[
-            ('number_of_samples', 10),          # for checking settling condition and averaging (steady state)
+            ('sample_size', 10),          # for checking settling condition and averaging (steady state)
             ('update_period', 0.1),             # in [s]
             ('max_traj_length', 500),           # maximum number of samples in a dynamic trajectory
             ('data_type', 'steady_state'),      # 'steady_state' or 'dynamic'
             ('mocap_type', 'rigid_bodies'),     # 'rigid_bodies' or 'markers'
-            ('control_type', 'output')          # 'output' or 'position'
+            ('control_type', 'output'),         # 'output' or 'position'
+            ('results_name', 'observations')
         ])
 
-        self.sample_size = self.get_parameter('number_of_samples').value
+        self.sample_size = self.get_parameter('sample_size').value
         self.update_period = self.get_parameter('update_period').value
         self.max_traj_length = self.get_parameter('max_traj_length').value
         self.data_type = self.get_parameter('data_type').value
         self.mocap_type = self.get_parameter('mocap_type').value
         self.control_type = self.get_parameter('control_type').value
+        self.results_name = self.get_parameter('results_name').value
         
         self.is_collecting = False
         self.previous_time = time.time()
@@ -47,7 +49,7 @@ class DataCollectionNode(Node):
         if self.data_type == 'steady_state':
             control_input_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/control_inputs_uniform.csv')
         elif self.data_type == 'dynamic':
-            control_input_csv_file = os.path.join(self.data_dir, 'trajectories/dynamic/control_inputs_uniform.csv')
+            control_input_csv_file = os.path.join(self.data_dir, 'trajectories/dynamic/control_inputs_decay.csv')
         else:
             raise ValueError('Invalid data type: ' + self.data_type + '. Valid options are: "steady_state" or "dynamic".')
         self.control_inputs_dict = load_control_inputs(control_input_csv_file)
@@ -106,15 +108,16 @@ class DataCollectionNode(Node):
                 else:
                     self.check_settled_positions.append(self.extract_positions(msg))
         elif self.data_type == 'dynamic':
-            if self.is_collecting:
-                self.store_positions(msg)
-                # Check settled because then the dynamic trajectory is done and we can continue
-                if self.check_settled() or len(self.stored_positions) >= self.max_traj_length:
-                    self.is_collecting = False
-                    names = self.extract_names(msg)
-                    self.process_data(names)
-                else:
-                    self.check_settled_positions.append(self.extract_positions(msg))
+            self.store_positions(msg)
+            # Check settled because then the dynamic trajectory is done and we can continue
+            if (self.check_settled() or len(self.stored_positions) >= self.max_traj_length) and \
+            (time.time() - self.previous_time) >= self.update_period:
+                self.previous_time = time.time()
+                self.is_collecting = False
+                names = self.extract_names(msg)
+                self.process_data(names)
+            else:
+                self.check_settled_positions.append(self.extract_positions(msg))
 
     def publish_control_inputs(self):
         control_message = AllMotorsControl()
@@ -174,7 +177,7 @@ class DataCollectionNode(Node):
 
     def process_data(self, names):
         # Populate the header row of the CSV file with states if it does not exist
-        trajectory_csv_file = os.path.join(self.data_dir, f'trajectories/{self.data_type}/observations.csv')
+        trajectory_csv_file = os.path.join(self.data_dir, f'trajectories/{self.data_type}/{self.results_name}.csv')
         if not os.path.exists(trajectory_csv_file):
             header = ['ID'] + [f'{axis}{name}' for name in names for axis in ['x', 'y', 'z']]
             with open(trajectory_csv_file, 'w', newline='') as file:
