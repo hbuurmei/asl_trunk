@@ -25,7 +25,7 @@ class DataCollectionNode(Node):
         self.declare_parameters(namespace='', parameters=[
             ('sample_size', 10),          # for checking settling condition and averaging (steady state)
             ('update_period', 0.1),             # in [s]
-            ('max_traj_length', 500),           # maximum number of samples in a dynamic trajectory
+            ('max_traj_length', 600),           # maximum number of samples in a dynamic trajectory
             ('data_type', 'steady_state'),      # 'steady_state' or 'dynamic'
             ('mocap_type', 'rigid_bodies'),     # 'rigid_bodies' or 'markers'
             ('control_type', 'output'),         # 'output' or 'position'
@@ -41,6 +41,7 @@ class DataCollectionNode(Node):
         self.results_name = self.get_parameter('results_name').value
         
         self.is_collecting = False
+        self.ic_settled = False
         self.previous_time = time.time()
         self.current_control_id = -1
         self.control_inputs = None
@@ -107,26 +108,41 @@ class DataCollectionNode(Node):
                         self.process_data(names)
                 else:
                     self.check_settled_positions.append(self.extract_positions(msg))
+        
         elif self.data_type == 'dynamic':
-            self.store_positions(msg)
-            # Check settled because then the dynamic trajectory is done and we can continue
-            if (self.check_settled() or len(self.stored_positions) >= self.max_traj_length) and \
-            (time.time() - self.previous_time) >= self.update_period:
-                self.previous_time = time.time()
-                self.is_collecting = False
-                names = self.extract_names(msg)
-                self.process_data(names)
-            else:
-                self.check_settled_positions.append(self.extract_positions(msg))
+            if self.is_collecting:
+                if not self.ic_settled:
+                    # If it has not settled yet we do not want to start measuring the decay yet
+                    self.ic_settled = self.check_settled(window=25)
+                    if self.ic_settled:
+                        # Remove control inputs
+                        self.publish_control_inputs(control_inputs=[0.0]*6)
+                        self.check_settled_positions = []
+                    else:
+                        self.check_settled_positions.append(self.extract_positions(msg))
+                else:
+                    self.store_positions(msg)
+                    # Check settled because then the dynamic trajectory is done and we can continue
+                    if (self.check_settled(window=25) or len(self.stored_positions) >= self.max_traj_length) and \
+                    (time.time() - self.previous_time) >= self.update_period:
+                        self.previous_time = time.time()
+                        self.is_collecting = False
+                        self.ic_settled = False
+                        names = self.extract_names(msg)
+                        self.process_data(names)
+                    else:
+                        self.check_settled_positions.append(self.extract_positions(msg))
 
-    def publish_control_inputs(self):
+    def publish_control_inputs(self, control_inputs=None):
+        if control_inputs is None:
+            control_inputs = self.control_inputs
         control_message = AllMotorsControl()
         mode = 1 if self.control_type == 'position' else 0  # default to 'output' control
         control_message.motors_control = [
-            SingleMotorControl(mode=mode, value=value) for value in self.control_inputs
+            SingleMotorControl(mode=mode, value=value) for value in control_inputs
         ]
         self.controls_publisher.publish(control_message)
-        self.get_logger().info('Published new motor control setting: ' + str(self.control_inputs))
+        self.get_logger().info('Published new motor control setting: ' + str(control_inputs))
 
     def extract_positions(self, msg):
         if self.mocap_type == 'markers':
