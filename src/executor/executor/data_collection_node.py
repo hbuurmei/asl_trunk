@@ -23,7 +23,7 @@ class DataCollectionNode(Node):
     def __init__(self):
         super().__init__('data_collection_node')
         self.declare_parameters(namespace='', parameters=[
-            ('sample_size', 10),          # for checking settling condition and averaging (steady state)
+            ('sample_size', 10),                # for checking settling condition and averaging (steady state)
             ('update_period', 0.1),             # in [s]
             ('max_traj_length', 600),           # maximum number of samples in a dynamic trajectory
             ('data_type', 'steady_state'),      # 'steady_state' or 'dynamic'
@@ -113,7 +113,7 @@ class DataCollectionNode(Node):
             if self.is_collecting:
                 if not self.ic_settled:
                     # If it has not settled yet we do not want to start measuring the decay yet
-                    self.ic_settled = self.check_settled(window=25)
+                    self.ic_settled = self.check_settled(window=20)
                     if self.ic_settled:
                         # Remove control inputs
                         self.publish_control_inputs(control_inputs=[0.0]*6)
@@ -123,7 +123,7 @@ class DataCollectionNode(Node):
                 else:
                     self.store_positions(msg)
                     # Check settled because then the dynamic trajectory is done and we can continue
-                    if (self.check_settled(window=25) or len(self.stored_positions) >= self.max_traj_length) and \
+                    if (self.check_settled(window=30) or len(self.stored_positions) >= self.max_traj_length) and \
                     (time.time() - self.previous_time) >= self.update_period:
                         self.previous_time = time.time()
                         self.is_collecting = False
