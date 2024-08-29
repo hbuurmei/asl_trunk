@@ -21,7 +21,6 @@ setup(
     entry_points={
         'console_scripts': [
             'ik_solver_node = controller.ik_solver_node:main',
-            'lqr_solver_node = controller.lqr_solver_node:main',
             'mpc_solver_node = controller.mpc_solver_node:main',
         ],
     },

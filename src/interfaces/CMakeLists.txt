@@ -19,7 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/SingleMotorStatus.msg"
   "msg/TrunkMarkers.msg"
   "msg/TrunkRigidBodies.msg"
-  "srv/MPCCommand.srv"
+  "srv/ControlSolver.srv"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs
 )
 

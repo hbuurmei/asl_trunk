@@ -14,6 +14,8 @@ class AVPStreamerNode(Node):
             ('recording_name', 'test_task_recording')
         ])
 
+        self.recording_name = self.get_parameter('recording_name').value
+
         self.avp_publisher = self.create_publisher(
             TrunkRigidBodies,
             '/avp_positions',
