@@ -2,8 +2,6 @@ import os
 import numpy as np
 import rclpy  # type: ignore
 from rclpy.node import Node  # type: ignore
-from rclpy.qos import QoSProfile  # type: ignore
-from interfaces.msg import SingleMotorControl, AllMotorsControl, TrunkMarkers, TrunkRigidBodies
 from interfaces.srv import ControlSolver
 
 
@@ -35,12 +33,12 @@ class IKSolverNode(Node):
     def ik_callback(self, request, response):
         """
         Callback function that runs when the service is queried.
-        Request contains: current_state (can be observations too)
-        Response contains: control_action to be taken
+        Request contains: z (desired performance variable trajectory)
+        Response contains: uopt (the found control inputs)
         """
-        current_state = np.array(request.current_state)
-        control_action = np.clip(self.y2u @ current_state, self.u_min, self.u_max)
-        response.control_action = control_action.tolist()
+        zf_des = np.array(request.zf)
+        u_opt = np.clip(self.y2u @ zf_des, self.u_min, self.u_max)
+        response.uopt = u_opt.tolist()
         return response
 
 

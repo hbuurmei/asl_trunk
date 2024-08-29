@@ -18,7 +18,7 @@ class AVPStreamerNode(Node):
 
         self.avp_publisher = self.create_publisher(
             TrunkRigidBodies,
-            '/avp_positions',
+            '/avp_des_positions',
             QoSProfile(depth=10)
         )
 
