@@ -4,7 +4,7 @@ import time
 import rclpy  # type: ignore
 from rclpy.node import Node  # type: ignore
 from rclpy.qos import QoSProfile  # type: ignore
-from interfaces.msg import TrunkMarkers, TrunkRigidBodies
+from interfaces.msg import TrunkRigidBodies
 
 
 class AVPStreamerNode(Node):
@@ -13,6 +13,12 @@ class AVPStreamerNode(Node):
         self.declare_parameters(namespace='', parameters=[
             ('recording_name', 'test_task_recording')
         ])
+
+        self.avp_publisher = self.create_publisher(
+            TrunkRigidBodies,
+            '/avp_positions',
+            QoSProfile(depth=10)
+        )
 
 
 def main(args=None):
