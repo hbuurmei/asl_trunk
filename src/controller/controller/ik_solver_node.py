@@ -25,6 +25,7 @@ class IKSolverNode(Node):
 
         # Define service, which uses the ik callback function
         self.srv = self.create_service(ControlSolver, 'ik_solver', self.ik_callback)
+        self.get_logger().info('Control solver service has been created.')
 
 
     def ik_callback(self, request, response):
