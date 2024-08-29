@@ -13,10 +13,14 @@ class IKSolverNode(Node):
         self.declare_parameters(namespace='', parameters=[
             ('u2y_file', 'u2y.npy'),
             ('y2u_file', 'y2u.npy'),
+            ('u_min', -0.25),
+            ('u_max', 0.25),
         ])
 
         self.u2y_file = self.get_parameter('u2y_file').value
         self.y2u_file = self.get_parameter('y2u_file').value
+        self.u_min = self.get_parameter('u_min').value
+        self.u_max = self.get_parameter('u_max').value
 
         # Get mappings
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
@@ -35,7 +39,7 @@ class IKSolverNode(Node):
         Response contains: control_action to be taken
         """
         current_state = np.array(request.current_state)
-        control_action = self.y2u @ current_state
+        control_action = np.clip(self.y2u @ current_state, self.u_min, self.u_max)
         response.control_action = control_action.tolist()
         return response
 
