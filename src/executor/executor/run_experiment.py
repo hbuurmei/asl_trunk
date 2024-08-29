@@ -12,7 +12,7 @@ class RunExperimentNode(Node):
         self.declare_parameters(namespace='', parameters=[
             ('debug', False),                               # False or True
             ('experiment_type', 'user'),                    # 'trajectory' or 'user' (what input is being tracked)
-            ('controller_type', 'ik')                       # 'ik' or 'mpc 
+            ('controller_type', 'ik'),                      # 'ik' or 'mpc 
             ('output_name', 'base_experiment')
         ])
 
