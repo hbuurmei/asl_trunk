@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'controller'
+package_name = 'streamer'
 
 setup(
     name=package_name,
@@ -14,14 +14,13 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='asl',
-    maintainer_email='asl@todo.todo',
+    maintainer_email='hugo.buurmeijer@gmail.com',
     description='TODO: Package description',
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'ik_solver_node = controller.ik_solver_node:main',
-            'mpc_solver_node = controller.mpc_solver_node:main',
+            'avp_streamer_node = streamer.avp_streamer_node:main',
         ],
     },
 )
