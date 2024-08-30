@@ -7,6 +7,7 @@ from rclpy.qos import QoSProfile  # type: ignore
 from interfaces.msg import TrunkRigidBodies
 from geometry_msgs.msg import Point
 from .avp_subscriber import AVPSubscriber
+from interfaces.srv import TriggerImageSaving
 
 
 class AVPStreamerNode(Node):
@@ -21,6 +22,7 @@ class AVPStreamerNode(Node):
         self.recording_name = self.get_parameter('recording_name').value
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
         self.recording_file = os.path.join(self.data_dir, f'trajectories/teleop/{self.recording_name}.csv')
+        self.client = self.create_client(TriggerImageSaving, 'trigger_image_saving')
 
         # Initialize stored positions and gripper states
         self.stored_positions = []
@@ -39,12 +41,13 @@ class AVPStreamerNode(Node):
         self._timer = self.create_timer(1.0 / 10.0, self.streamer_data_sampling_callback)
 
     def streamer_data_sampling_callback(self):
-        # Determine trajectory ID
+        # Determine trajectory ID - when recording starts
         if self.streamer.isRecording and not self.streamer.previousRecordingState:
             self.get_logger().info('New traj.')
             self.stored_positions = []
             self.stored_gripper_states = []
             self.recording_id += 1
+            self.trigger_image_saving() #save an image
 
         self.get_logger().info(f'Current: {self.streamer.isRecording}, previous: {self.streamer.previousRecordingState}')
 
@@ -56,7 +59,7 @@ class AVPStreamerNode(Node):
         if self.debug:
             self.get_logger().info(f'Published AVP desired positions {avp_positions}.')
 
-        # Store trajectory
+        # Store trajectory - when recording ends
         if not self.streamer.isRecording and self.streamer.previousRecordingState:
             # if self.debug:
             self.get_logger().info('Processing data.')
@@ -103,6 +106,21 @@ class AVPStreamerNode(Node):
                 writer.writerow(row)
         self.get_logger().info(f'Stored the data corresponding to the {self.recording_id}th trajectory.')
 
+    def trigger_image_saving(self):
+        if self.client.wait_for_service(timeout_sec=1):
+            req = TriggerImageSaving.Request()
+            future = self.client.call_async(req)
+            rclpy.spin_until_future_complete(self, future)
+            try:
+                response = future.result()
+                if response.success:
+                    self.get_logger().info('Image saving triggered successfully')
+                else:
+                    self.get_logger().error('Image saving failed')
+            except Exception as e:
+                self.get_logger().error(f'Service call failed: {e}')
+        else:
+            self.get_logger().error('Failed to connect to trigger_image_saving service')
 
 def main(args=None):
     rclpy.init(args=args)
