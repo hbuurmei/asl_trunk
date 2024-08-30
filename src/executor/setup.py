@@ -22,6 +22,7 @@ setup(
     entry_points={
         'console_scripts': [
             'data_collection_node = executor.data_collection_node:main',
+            'run_experiment_node = executor.run_experiment_node:main',
         ],
     },
 )
