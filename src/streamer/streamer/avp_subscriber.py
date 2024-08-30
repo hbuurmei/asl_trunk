@@ -1,16 +1,16 @@
-import grpc
+import csv
+import grpc  # type: ignore
 from threading import Thread
 import numpy as np
-import disktracking_pb2
-import disktracking_pb2_grpc
+import streamer.disktracking_pb2 as disktracking_pb2
+import streamer.disktracking_pb2_grpc as disktracking_pb2_grpc
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from mpl_toolkits.mplot3d import Axes3D
-import csv
 
-class DiskPositionStreamer:
 
-    def __init__(self, ip, isRecording=False, gripper_open=False): 
+class AVPSubscriber:
+
+    def __init__(self, ip, isRecording=False, gripper_open=False, recording_file="recorded_data.csv"): 
         # Initialize with the Vision Pro IP
         self.ip = ip
         self.latest = None 
@@ -19,8 +19,7 @@ class DiskPositionStreamer:
         self.isRecording = isRecording 
         self.previousRecordingState = False
         self.data = []
-        self.recording_id = -1
-        self.csv_filename = "recorded_data.csv"
+        self.csv_filename = recording_file
         self.initialize_csv()
         self.start_streaming()
 
@@ -31,12 +30,11 @@ class DiskPositionStreamer:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
-
     def start_streaming(self): 
         stream_thread = Thread(target=self.stream)
         stream_thread.start() 
         while self.latest is None: 
-            pass 
+            pass
         print(' == DATA IS FLOWING IN! ==')
         print('Ready to start streaming.') 
 
@@ -57,18 +55,11 @@ class DiskPositionStreamer:
                         self.isRecording = response.isRecording
                         self.isGripperOpen = response.isGripperOpen
 
-                        # increment trajectory ID
-                        if self.isRecording and not self.previousRecordingState:
-                            self.recording_id += 1
-
-                        if self.isRecording:
-                            self.save_to_csv(positions)
-
+                        # if self.isRecording:
+                            # self.save_to_csv(positions)
 
                         self.previousRecordingState = self.isRecording
                         self.latest = positions 
-
-
 
             except Exception as e:
                 if e.details() != self.last_error_message: # only print error message if its new
@@ -76,25 +67,25 @@ class DiskPositionStreamer:
                     self.last_error_message = e.details()  
                 pass 
 
-    def save_to_csv(self, positions):
-        with open(self.csv_filename, 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            row = [
-                self.recording_id, 
-                positions['disk_positions'].get('disk1', [0, 0, 0])[0],
-                positions['disk_positions'].get('disk1', [0, 0, 0])[1],
-                positions['disk_positions'].get('disk1', [0, 0, 0])[2],
+    # def save_to_csv(self, positions):
+    #     with open(self.csv_filename, 'a', newline='') as csvfile:
+    #         writer = csv.writer(csvfile)
+    #         row = [
+    #             self.recording_id, 
+    #             positions['disk_positions'].get('disk1', [0, 0, 0])[0],
+    #             positions['disk_positions'].get('disk1', [0, 0, 0])[1],
+    #             positions['disk_positions'].get('disk1', [0, 0, 0])[2],
 
-                positions['disk_positions'].get('disk2', [0, 0, 0])[0],
-                positions['disk_positions'].get('disk2', [0, 0, 0])[1],
-                positions['disk_positions'].get('disk2', [0, 0, 0])[2],
+    #             positions['disk_positions'].get('disk2', [0, 0, 0])[0],
+    #             positions['disk_positions'].get('disk2', [0, 0, 0])[1],
+    #             positions['disk_positions'].get('disk2', [0, 0, 0])[2],
                 
-                positions['disk_positions'].get('disk3', [0, 0, 0])[0],
-                positions['disk_positions'].get('disk3', [0, 0, 0])[1],
-                positions['disk_positions'].get('disk3', [0, 0, 0])[2],
-                int(self.isGripperOpen)  # Convert boolean to 1 (True) or 0 (False)
-            ]
-            writer.writerow(row)
+    #             positions['disk_positions'].get('disk3', [0, 0, 0])[0],
+    #             positions['disk_positions'].get('disk3', [0, 0, 0])[1],
+    #             positions['disk_positions'].get('disk3', [0, 0, 0])[2],
+    #             int(self.isGripperOpen)  # Convert boolean to 1 (True) or 0 (False)
+    #         ]
+    #         writer.writerow(row)
 
     def get_latest(self): 
         return self.latest
@@ -147,7 +138,6 @@ class RealTimePlot3D:
         plt.show()
 
 if __name__ == "__main__":
-    streamer = DiskPositionStreamer(ip='10.93.181.122', gripper_open=False, isRecording=False)
+    streamer = AVPSubscriber(ip='10.93.181.122', gripper_open=False, isRecording=False)
     plotter = RealTimePlot3D(streamer)
     plotter.start()
-
