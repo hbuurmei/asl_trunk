@@ -23,8 +23,8 @@ class AVPStreamerNode(Node):
         self.recording_file = os.path.join(self.data_dir, f'trajectories/teleop/{self.recording_name}.csv')
 
         # Initialize stored positions and gripper states
-        # self.stored_positions = []
-        # self.stored_gripper_states = []
+        self.stored_positions = []
+        self.stored_gripper_states = []
 
         # Keep track of trajectory ID
         self.recording_id = -1
@@ -35,30 +35,32 @@ class AVPStreamerNode(Node):
             QoSProfile(depth=10)
         )
 
-        self.streamer = AVPSubscriber(
-            ip='10.93.181.122',
-            gripper_open=False,
-            recording_file=self.recording_file
-            )
-        
+        self.streamer = AVPSubscriber(ip='10.93.181.122')
         self._timer = self.create_timer(1.0 / 10.0, self.streamer_data_sampling_callback)
-        
+
     def streamer_data_sampling_callback(self):
         # Determine trajectory ID
         if self.streamer.isRecording and not self.streamer.previousRecordingState:
+            self.get_logger().info('New traj.')
             self.stored_positions = []
             self.stored_gripper_states = []
             self.recording_id += 1
 
+        self.get_logger().info(f'Current: {self.streamer.isRecording}, previous: {self.streamer.previousRecordingState}')
+
         avp_positions = self.streamer.get_latest()
         trunk_rigid_bodies_msg = self.convert_avp_positions_to_trunk_rigid_bodies(avp_positions)
+        self.stored_positions.append(trunk_rigid_bodies_msg.positions)
+        self.stored_gripper_states.append(self.streamer.isGripperOpen)
         self.avp_publisher.publish(trunk_rigid_bodies_msg)
         if self.debug:
             self.get_logger().info(f'Published AVP desired positions {avp_positions}.')
 
         # Store trajectory
         if not self.streamer.isRecording and self.streamer.previousRecordingState:
-            self.process_data(trunk_rigid_bodies_msg.names)
+            # if self.debug:
+            self.get_logger().info('Processing data.')
+            self.process_data()
 
     def convert_avp_positions_to_trunk_rigid_bodies(self, avp_positions):
         """
@@ -67,13 +69,13 @@ class AVPStreamerNode(Node):
         msg = TrunkRigidBodies()
 
         # Extract rigid body names and positions
-        rigid_body_names = ["1", "2", "3"]
+        self.rigid_body_names = ["1", "2", "3"]
         positions_list = [
-            avp_positions['disk_positions'].get(f'disk{name}', [0, 0, 0]) for name in rigid_body_names
+            avp_positions['disk_positions'].get(f'disk{name}', [0, 0, 0]) for name in self.rigid_body_names
         ]
 
         msg.frame_number = 0  # TODO: replace?
-        msg.rigid_body_names = rigid_body_names
+        msg.rigid_body_names = self.rigid_body_names
         points = []
         for position in positions_list:
             point = Point()
@@ -85,10 +87,10 @@ class AVPStreamerNode(Node):
 
         return msg
 
-    def process_data(self, names):
+    def process_data(self):
         # Populate the header row of the CSV file with states if it does not exist
         if not os.path.exists(self.recording_file):
-            header = ['ID'] + [f'{axis}{name}' for name in names for axis in ['x', 'y', 'z']] + ['isGripperOpen']
+            header = ['ID'] + [f'{axis}{name}' for name in self.rigid_body_names for axis in ['x', 'y', 'z']] + ['isGripperOpen']
             with open(self.recording_file, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(header)
@@ -96,10 +98,10 @@ class AVPStreamerNode(Node):
         # Store all positions and gripper state in a CSV file
         with open(self.recording_file, 'a', newline='') as file:
             writer = csv.writer(file)
-            for i, pos_list in enumerate(self.recorded_positions):
-                row = [self.streamer.recording_id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]] + [self.stored_gripper_states[i]]
+            for i, pos_list in enumerate(self.stored_positions):
+                row = [self.recording_id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]] + [self.stored_gripper_states[i]]
                 writer.writerow(row)
-        self.get_logger().info(f'Stored the data corresponding to the {self.streamer.recording_id}th trajectory.')
+        self.get_logger().info(f'Stored the data corresponding to the {self.recording_id}th trajectory.')
 
 
 def main(args=None):

@@ -6,11 +6,12 @@ import streamer.disktracking_pb2 as disktracking_pb2
 import streamer.disktracking_pb2_grpc as disktracking_pb2_grpc
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import time
 
 
 class AVPSubscriber:
 
-    def __init__(self, ip, isRecording=False, gripper_open=False, recording_file="recorded_data.csv"): 
+    def __init__(self, ip, isRecording=False, gripper_open=False): 
         # Initialize with the Vision Pro IP
         self.ip = ip
         self.latest = None 
@@ -18,24 +19,13 @@ class AVPSubscriber:
         self.isGripperOpen = gripper_open
         self.isRecording = isRecording 
         self.previousRecordingState = False
-        self.data = []
-        self.csv_filename = recording_file
-        self.initialize_csv()
         self.start_streaming()
-
-    def initialize_csv(self):
-        # Initialize the CSV file with headers
-        with open(self.csv_filename, 'w', newline='') as csvfile:
-            fieldnames = ['ID', 'x1', 'y1', 'z1', 'x2', 'y2', 'z2', 'x3', 'y3', 'z3', 'isGripperOpen']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
 
     def start_streaming(self): 
         stream_thread = Thread(target=self.stream)
         stream_thread.start() 
         while self.latest is None: 
             pass
-        print(' == DATA IS FLOWING IN! ==')
         print('Ready to start streaming.') 
 
     def stream(self): 
@@ -52,40 +42,20 @@ class AVPSubscriber:
                         positions = {
                             "disk_positions": {k: np.array(v.position) for k, v in response.disk_positions.items()},
                         }
+                        self.previousRecordingState = self.isRecording
+                        
                         self.isRecording = response.isRecording
                         self.isGripperOpen = response.isGripperOpen
+                        self.latest = positions
 
-                        # if self.isRecording:
-                            # self.save_to_csv(positions)
-
-                        self.previousRecordingState = self.isRecording
-                        self.latest = positions 
+                        # Force an operating frequency of 10 Hz
+                        time.sleep(0.1)
 
             except Exception as e:
                 if e.details() != self.last_error_message: # only print error message if its new
                     print(f"Connection failed, retrying: {e.details()}")
                     self.last_error_message = e.details()  
                 pass 
-
-    # def save_to_csv(self, positions):
-    #     with open(self.csv_filename, 'a', newline='') as csvfile:
-    #         writer = csv.writer(csvfile)
-    #         row = [
-    #             self.recording_id, 
-    #             positions['disk_positions'].get('disk1', [0, 0, 0])[0],
-    #             positions['disk_positions'].get('disk1', [0, 0, 0])[1],
-    #             positions['disk_positions'].get('disk1', [0, 0, 0])[2],
-
-    #             positions['disk_positions'].get('disk2', [0, 0, 0])[0],
-    #             positions['disk_positions'].get('disk2', [0, 0, 0])[1],
-    #             positions['disk_positions'].get('disk2', [0, 0, 0])[2],
-                
-    #             positions['disk_positions'].get('disk3', [0, 0, 0])[0],
-    #             positions['disk_positions'].get('disk3', [0, 0, 0])[1],
-    #             positions['disk_positions'].get('disk3', [0, 0, 0])[2],
-    #             int(self.isGripperOpen)  # Convert boolean to 1 (True) or 0 (False)
-    #         ]
-    #         writer.writerow(row)
 
     def get_latest(self): 
         return self.latest
