@@ -23,6 +23,8 @@ class AVPStreamerNode(Node):
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
         self.recording_file = os.path.join(self.data_dir, f'trajectories/teleop/{self.recording_name}.csv')
         self.client = self.create_client(TriggerImageSaving, 'trigger_image_saving')
+        while not self.client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Image saving service not yet available, waiting...')
 
         # Initialize stored positions and gripper states
         self.stored_positions = []
@@ -107,20 +109,18 @@ class AVPStreamerNode(Node):
         self.get_logger().info(f'Stored the data corresponding to the {self.recording_id}th trajectory.')
 
     def trigger_image_saving(self):
-        if self.client.wait_for_service(timeout_sec=1):
-            req = TriggerImageSaving.Request()
-            future = self.client.call_async(req)
-            rclpy.spin_until_future_complete(self, future)
-            try:
-                response = future.result()
-                if response.success:
-                    self.get_logger().info('Image saving triggered successfully')
-                else:
-                    self.get_logger().error('Image saving failed')
-            except Exception as e:
-                self.get_logger().error(f'Service call failed: {e}')
-        else:
-            self.get_logger().error('Failed to connect to trigger_image_saving service')
+        req = TriggerImageSaving.Request()
+        future = self.client.call_async(req)
+        rclpy.spin_until_future_complete(self, future)
+        try:
+            response = future.result()
+            if response.success:
+                self.get_logger().info('Image saving triggered successfully')
+            else:
+                self.get_logger().error('Image saving failed')
+        except Exception as e:
+            self.get_logger().error(f'Service call failed: {e}')
+
 
 def main(args=None):
     rclpy.init(args=args)
