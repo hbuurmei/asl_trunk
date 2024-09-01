@@ -18,8 +18,10 @@ class ImageStoringNode(Node):
         self.recording_folder = os.path.join(self.data_dir, 'trajectories/teleop/CNN')
         self.sample_id = 0 # need to match sample ID here and in streamer node
         self.server = self.create_service(TriggerImageSaving, 'trigger_image_saving', self.handle_trigger_image_saving)
+        self.get_logger().info('Image saving service has been created.')
 
-    def handle_trigger_image_saving(self, msg, request, response):
+    def handle_trigger_image_saving(self, request, response):
+        number_of_images = request.number_of_images  # TODO: use this? last N img to save
         response.success = True
 
         filename = os.path.join(self.recording_folder, f'sample_{self.sample_id}')
@@ -28,6 +30,7 @@ class ImageStoringNode(Node):
 
         self.get_logger().info(f"Saved image as {filename}")
         self.sample_id += 1
+        return response
 
 
 def main(args=None):
