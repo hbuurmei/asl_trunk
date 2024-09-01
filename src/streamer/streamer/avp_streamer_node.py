@@ -21,7 +21,8 @@ class AVPStreamerNode(Node):
         self.debug = self.get_parameter('debug').value
         self.recording_name = self.get_parameter('recording_name').value
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
-        self.recording_file = os.path.join(self.data_dir, f'trajectories/teleop/{self.recording_name}.csv')
+        self.recording_file = os.path.join(self.data_dir, f'trajectories/teleop/single/{self.recording_name}.csv')
+        self.img_filename = None
         self.client = self.create_client(TriggerImageSaving, 'trigger_image_saving')
         while not self.client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Image saving service not yet available, waiting...')
@@ -50,8 +51,9 @@ class AVPStreamerNode(Node):
             self.stored_gripper_states = []
             self.recording_id += 1
             self.trigger_image_saving() #save an image
+            self.get_logger().info('saved image')
 
-        self.get_logger().info(f'Current: {self.streamer.isRecording}, previous: {self.streamer.previousRecordingState}')
+        # self.get_logger().info(f'Current: {self.streamer.isRecording}, previous: {self.streamer.previousRecordingState}')
 
         avp_positions = self.streamer.get_latest()
         trunk_rigid_bodies_msg = self.convert_avp_positions_to_trunk_rigid_bodies(avp_positions)
@@ -95,7 +97,7 @@ class AVPStreamerNode(Node):
     def process_data(self):
         # Populate the header row of the CSV file with states if it does not exist
         if not os.path.exists(self.recording_file):
-            header = ['ID'] + [f'{axis}{name}' for name in self.rigid_body_names for axis in ['x', 'y', 'z']] + ['isGripperOpen']
+            header = ['ID'] + [f'{axis}{name}' for name in self.rigid_body_names for axis in ['x', 'y', 'z']] + ['isGripperOpen'] + ['img_filename']
             with open(self.recording_file, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(header)
@@ -104,22 +106,28 @@ class AVPStreamerNode(Node):
         with open(self.recording_file, 'a', newline='') as file:
             writer = csv.writer(file)
             for i, pos_list in enumerate(self.stored_positions):
-                row = [self.recording_id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]] + [self.stored_gripper_states[i]]
+                row = [self.recording_id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]] + [self.stored_gripper_states[i]] + [self.img_filename]
                 writer.writerow(row)
         self.get_logger().info(f'Stored the data corresponding to the {self.recording_id}th trajectory.')
 
     def trigger_image_saving(self):
         req = TriggerImageSaving.Request()
-        future = self.client.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
+
+        self.async_response = self.client.call_async(req)
+        self.async_response.add_done_callback(self.service_callback)
+
+    def service_callback(self, async_response):
         try:
-            response = future.result()
+            response = self.async_response.result()
+            self.img_filename = response.img_filename
+
             if response.success:
                 self.get_logger().info('Image saving triggered successfully')
             else:
                 self.get_logger().error('Image saving failed')
         except Exception as e:
             self.get_logger().error(f'Service call failed: {e}')
+        
 
 
 def main(args=None):
