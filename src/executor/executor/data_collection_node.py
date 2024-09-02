@@ -26,7 +26,8 @@ class DataCollectionNode(Node):
             ('sample_size', 10),                # for checking settling condition and averaging (steady state)
             ('update_period', 0.1),             # in [s]
             ('max_traj_length', 600),           # maximum number of samples in a dynamic trajectory
-            ('data_type', 'steady_state'),      # 'steady_state' or 'dynamic'
+            ('data_type', 'dynamic'),           # 'steady_state' or 'dynamic'
+            ('data_subtype', 'controlled'),     # 'decay' or 'controlled' (for dynamic trajectories)
             ('mocap_type', 'rigid_bodies'),     # 'rigid_bodies' or 'markers'
             ('control_type', 'output'),         # 'output' or 'position'
             ('results_name', 'observations')
@@ -37,6 +38,7 @@ class DataCollectionNode(Node):
         self.max_traj_length = self.get_parameter('max_traj_length').value
         self.max_traj_length = self.get_parameter('max_traj_length').value
         self.data_type = self.get_parameter('data_type').value
+        self.data_subtype = self.get_parameter('data_subtype').value
         self.mocap_type = self.get_parameter('mocap_type').value
         self.control_type = self.get_parameter('control_type').value
         self.results_name = self.get_parameter('results_name').value
@@ -51,7 +53,7 @@ class DataCollectionNode(Node):
         if self.data_type == 'steady_state':
             control_input_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/control_inputs_uniform.csv')
         elif self.data_type == 'dynamic':
-            control_input_csv_file = os.path.join(self.data_dir, 'trajectories/dynamic/control_inputs_decay.csv')
+            control_input_csv_file = os.path.join(self.data_dir, f'trajectories/dynamic/control_inputs_{self.data_subtype}.csv')
         else:
             raise ValueError('Invalid data type: ' + self.data_type + '. Valid options are: "steady_state" or "dynamic".')
         self.control_inputs_dict = load_control_inputs(control_input_csv_file)
