@@ -24,8 +24,8 @@ class AVPStreamerNode(Node):
         self.recording_file = os.path.join(self.data_dir, f'trajectories/teleop/single/{self.recording_name}.csv')
         self.img_filename = None
         self.client = self.create_client(TriggerImageSaving, 'trigger_image_saving')
-        while not self.client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Image saving service not yet available, waiting...')
+        # while not self.client.wait_for_service(timeout_sec=1.0):
+            # self.get_logger().info('Image saving service not yet available, waiting...')
 
         # Initialize stored positions and gripper states
         self.stored_positions = []
@@ -42,6 +42,8 @@ class AVPStreamerNode(Node):
 
         self.streamer = AVPSubscriber(ip='10.93.181.122')
         self._timer = self.create_timer(1.0 / 10.0, self.streamer_data_sampling_callback)
+        self.get_logger().info('AVP streaming node has been started.')
+
 
     def streamer_data_sampling_callback(self):
         # Determine trajectory ID - when recording starts
