@@ -24,7 +24,7 @@ class DataCollectionNode(Node):
         super().__init__('data_collection_node')
         self.declare_parameters(namespace='', parameters=[
             ('sample_size', 10),                # for checking settling condition and averaging (steady state)
-            ('update_period', 0.1),             # in [s]
+            ('update_period', 0.1),             # for steady state and avoiding dynamic trajectories to interrupt each other, in [s]
             ('max_traj_length', 600),           # maximum number of samples in a dynamic trajectory
             ('data_type', 'dynamic'),           # 'steady_state' or 'dynamic'
             ('data_subtype', 'controlled'),     # 'decay' or 'controlled' (for dynamic trajectories)
@@ -80,6 +80,7 @@ class DataCollectionNode(Node):
             '/all_motors_control',
             QoSProfile(depth=10)
         )
+        self.get_logger().info('Data collection node has been started.')
 
     def listener_callback(self, msg):
         if not self.is_collecting:
@@ -88,7 +89,6 @@ class DataCollectionNode(Node):
             self.check_settled_positions = []
             self.is_collecting = True
 
-            # Publish new motor control inputs
             # Publish new motor control inputs
             self.current_control_id += 1
             self.control_inputs = self.control_inputs_dict.get(self.current_control_id)
