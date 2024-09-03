@@ -49,6 +49,7 @@ class DataCollectionNode(Node):
         self.ic_settled = False
         self.previous_time = time.time()
         self.current_control_id = -1
+        self.stored_positions = []
         self.control_inputs = None
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
 
@@ -85,7 +86,7 @@ class DataCollectionNode(Node):
         self.get_logger().info('Data collection node has been started.')
 
     def listener_callback(self, msg):
-        if self.data_type == 'steady_state' and self.data_subtype == 'controlled':
+        if self.data_type == 'dynamic' and self.data_subtype == 'controlled':
             # Store current positions
             self.store_positions(msg)
             
@@ -217,7 +218,6 @@ class DataCollectionNode(Node):
 
         return True
 
-
     def process_data(self, names):
         # Populate the header row of the CSV file with states if it does not exist
         trajectory_csv_file = os.path.join(self.data_dir, f'trajectories/{self.data_type}/{self.results_name}.csv')
@@ -244,8 +244,8 @@ class DataCollectionNode(Node):
             # Store all positions in a CSV file
             with open(trajectory_csv_file, 'a', newline='') as file:
                 writer = csv.writer(file)
-                for pos_list in self.stored_positions:
-                    row = [self.current_control_id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]]
+                for id, pos_list in enumerate(self.stored_positions):
+                    row = [id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]]
                     writer.writerow(row)
             if self.debug:
                 self.get_logger().info(f'Stored the data corresponding to the {self.current_control_id}th trajectory.')

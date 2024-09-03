@@ -9,10 +9,10 @@ control_inputs_file = os.path.join(data_dir, f'trajectories/dynamic/control_inpu
 
 # Parameters
 n_u = 6
-sample_interval = 5  # [s]
-total_duration = 100  # [s]
+sample_interval = 1  # [s]
+total_duration = 150  # [s]
 sampling_rate = 100  # [Hz]
-u_min, u_max = -0.25, 0.25
+u_min, u_max = -0.35, 0.35
 
 # Number of samples
 num_samples = total_duration // sample_interval
