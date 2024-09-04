@@ -23,20 +23,24 @@ class DataCollectionNode(Node):
     def __init__(self):
         super().__init__('data_collection_node')
         self.declare_parameters(namespace='', parameters=[
+            ('debug', False),                   # False or True
             ('sample_size', 10),                # for checking settling condition and averaging (steady state)
-            ('update_period', 0.1),             # in [s]
+            ('update_period', 0.1),             # for steady state and avoiding dynamic trajectories to interrupt each other, in [s]
             ('max_traj_length', 600),           # maximum number of samples in a dynamic trajectory
-            ('data_type', 'steady_state'),      # 'steady_state' or 'dynamic'
+            ('data_type', 'dynamic'),           # 'steady_state' or 'dynamic'
+            ('data_subtype', 'controlled'),     # 'decay' or 'controlled' (for dynamic trajectories)
             ('mocap_type', 'rigid_bodies'),     # 'rigid_bodies' or 'markers'
             ('control_type', 'output'),         # 'output' or 'position'
             ('results_name', 'observations')
         ])
 
+        self.debug = self.get_parameter('debug').value
         self.sample_size = self.get_parameter('sample_size').value
         self.update_period = self.get_parameter('update_period').value
         self.max_traj_length = self.get_parameter('max_traj_length').value
         self.max_traj_length = self.get_parameter('max_traj_length').value
         self.data_type = self.get_parameter('data_type').value
+        self.data_subtype = self.get_parameter('data_subtype').value
         self.mocap_type = self.get_parameter('mocap_type').value
         self.control_type = self.get_parameter('control_type').value
         self.results_name = self.get_parameter('results_name').value
@@ -45,13 +49,14 @@ class DataCollectionNode(Node):
         self.ic_settled = False
         self.previous_time = time.time()
         self.current_control_id = -1
+        self.stored_positions = []
         self.control_inputs = None
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
 
         if self.data_type == 'steady_state':
             control_input_csv_file = os.path.join(self.data_dir, 'trajectories/steady_state/control_inputs_uniform.csv')
         elif self.data_type == 'dynamic':
-            control_input_csv_file = os.path.join(self.data_dir, 'trajectories/dynamic/control_inputs_decay.csv')
+            control_input_csv_file = os.path.join(self.data_dir, f'trajectories/dynamic/control_inputs_{self.data_subtype}.csv')
         else:
             raise ValueError('Invalid data type: ' + self.data_type + '. Valid options are: "steady_state" or "dynamic".')
         self.control_inputs_dict = load_control_inputs(control_input_csv_file)
@@ -78,24 +83,45 @@ class DataCollectionNode(Node):
             '/all_motors_control',
             QoSProfile(depth=10)
         )
+        self.get_logger().info('Data collection node has been started.')
 
     def listener_callback(self, msg):
-        if not self.is_collecting:
-            # Reset and start collecting new mocap data
-            self.stored_positions = []
-            self.check_settled_positions = []
-            self.is_collecting = True
-
+        if self.data_type == 'dynamic' and self.data_subtype == 'controlled':
+            # Store current positions
+            self.store_positions(msg)
+            
             # Publish new motor control inputs
             # Publish new motor control inputs
             self.current_control_id += 1
             self.control_inputs = self.control_inputs_dict.get(self.current_control_id)
             if self.control_inputs is None:
-                self.get_logger().info('Data collection has finished.')
+                # Process data
+                names = self.extract_names(msg)
+                self.process_data(names)
+
+                # Finish
+                self.get_logger().info('Controlled data collection has finished.')
                 self.destroy_node()
                 rclpy.shutdown()
             else:
                 self.publish_control_inputs()
+
+        else:
+            if not self.is_collecting:
+                # Reset and start collecting new mocap data
+                self.stored_positions = []
+                self.check_settled_positions = []
+                self.is_collecting = True
+
+                # Publish new motor control inputs
+                self.current_control_id += 1
+                self.control_inputs = self.control_inputs_dict.get(self.current_control_id)
+                if self.control_inputs is None:
+                    self.get_logger().info('Data collection has finished.')
+                    self.destroy_node()
+                    rclpy.shutdown()
+                else:
+                    self.publish_control_inputs()
 
         if self.data_type == 'steady_state':
             if self.is_collecting and (time.time() - self.previous_time) >= self.update_period:
@@ -111,7 +137,7 @@ class DataCollectionNode(Node):
                 else:
                     self.check_settled_positions.append(self.extract_positions(msg))
         
-        elif self.data_type == 'dynamic':
+        elif self.data_type == 'dynamic' and self.data_subtype == 'decay':
             if self.is_collecting:
                 if not self.ic_settled:
                     # If it has not settled yet we do not want to start measuring the decay yet
@@ -144,7 +170,8 @@ class DataCollectionNode(Node):
             SingleMotorControl(mode=mode, value=value) for value in control_inputs
         ]
         self.controls_publisher.publish(control_message)
-        self.get_logger().info('Published new motor control setting: ' + str(control_inputs))
+        if self.debug:
+            self.get_logger().info('Published new motor control setting: ' + str(control_inputs))
 
     def extract_positions(self, msg):
         if self.mocap_type == 'markers':
@@ -192,7 +219,6 @@ class DataCollectionNode(Node):
 
         return True
 
-
     def process_data(self, names):
         # Populate the header row of the CSV file with states if it does not exist
         trajectory_csv_file = os.path.join(self.data_dir, f'trajectories/{self.data_type}/{self.results_name}.csv')
@@ -214,14 +240,24 @@ class DataCollectionNode(Node):
                 writer = csv.writer(file)            
                 writer.writerow(average_positions)
             self.get_logger().info('Stored new sample with positions: ' + str(average_positions) + ' [m].')
-        elif self.data_type == 'dynamic':
+        
+        elif self.data_type == 'dynamic' and self.data_subtype == 'decay':
             # Store all positions in a CSV file
             with open(trajectory_csv_file, 'a', newline='') as file:
                 writer = csv.writer(file)
-                for pos_list in self.stored_positions:
+                for id, pos_list in enumerate(self.stored_positions):
                     row = [self.current_control_id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]]
                     writer.writerow(row)
-            self.get_logger().info(f'Stored the data corresponding to the {self.current_control_id}th trajectory.')
+
+        elif self.data_type == 'dynamic' and self.data_subtype == 'controlled':
+            # Store all positions in a CSV file
+            with open(trajectory_csv_file, 'a', newline='') as file:
+                writer = csv.writer(file)
+                for id, pos_list in enumerate(self.stored_positions):
+                    row = [id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]]
+                    writer.writerow(row)
+            # if self.debug:
+            #     self.get_logger().info(f'Stored the data corresponding to the {self.current_control_id}th trajectory.')
 
 
 def main(args=None):

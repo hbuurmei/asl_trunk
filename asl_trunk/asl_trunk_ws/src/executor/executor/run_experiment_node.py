@@ -1,5 +1,6 @@
 import os
 import rclpy  # type: ignore
+import numpy as np
 from rclpy.node import Node  # type: ignore
 from rclpy.qos import QoSProfile  # type: ignore
 from interfaces.msg import SingleMotorControl, AllMotorsControl, TrunkMarkers, TrunkRigidBodies
@@ -65,6 +66,8 @@ class RunExperimentNode(Node):
             QoSProfile(depth=10)
         )
 
+        self.get_logger().info('Run experiment node has been started.')
+
     def teleop_listener_callback(self, msg):
         if self.debug:
             self.get_logger().info(f'Received teleop desired positions: {msg.positions}.')
@@ -73,7 +76,12 @@ class RunExperimentNode(Node):
         request = ControlSolver.Request()
 
         # Populate request with desired positions from teleop
-        request.zf = [coord for pos in msg.positions for coord in [pos.x, pos.y, pos.z]]
+        zf = np.array([coord for pos in msg.positions for coord in [pos.x, pos.y, pos.z]])
+
+        # Center data around zero
+        settled_positions = np.array([0, -0.10665, 0, 0, -0.20432, 0, 0, -0.320682, 0])
+        zf_centered = zf - settled_positions
+        request.zf = zf_centered.tolist()
 
         # Call the service
         self.async_response = self.client.call_async(request)
