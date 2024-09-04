@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'avp_streamer_node = streamer.avp_streamer_node:main',
+            'image_storing_node = streamer.image_storing_node:main',
         ],
     },
 )

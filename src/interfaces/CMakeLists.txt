@@ -20,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TrunkMarkers.msg"
   "msg/TrunkRigidBodies.msg"
   "srv/ControlSolver.srv"
+  "srv/TriggerImageSaving.srv"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs
 )
 
