@@ -136,7 +136,7 @@ class DataCollectionNode(Node):
                 else:
                     self.check_settled_positions.append(self.extract_positions(msg))
         
-        elif self.data_type == 'dynamic':
+        elif self.data_type == 'dynamic' and self.data_subtype == 'decay':
             if self.is_collecting:
                 if not self.ic_settled:
                     # If it has not settled yet we do not want to start measuring the decay yet
@@ -240,15 +240,23 @@ class DataCollectionNode(Node):
                 writer.writerow(average_positions)
             self.get_logger().info('Stored new sample with positions: ' + str(average_positions) + ' [m].')
         
-        elif self.data_type == 'dynamic':
+        elif self.data_type == 'dynamic' and self.data_subtype == 'decay':
+            # Store all positions in a CSV file
+            with open(trajectory_csv_file, 'a', newline='') as file:
+                writer = csv.writer(file)
+                for id, pos_list in enumerate(self.stored_positions):
+                    row = [self.current_control_id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]]
+                    writer.writerow(row)
+
+        elif self.data_type == 'dynamic' and self.data_subtype == 'controlled':
             # Store all positions in a CSV file
             with open(trajectory_csv_file, 'a', newline='') as file:
                 writer = csv.writer(file)
                 for id, pos_list in enumerate(self.stored_positions):
                     row = [id] + [coord for pos in pos_list for coord in [pos.x, pos.y, pos.z]]
                     writer.writerow(row)
-            if self.debug:
-                self.get_logger().info(f'Stored the data corresponding to the {self.current_control_id}th trajectory.')
+            # if self.debug:
+            #     self.get_logger().info(f'Stored the data corresponding to the {self.current_control_id}th trajectory.')
 
 
 def main(args=None):
