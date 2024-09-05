@@ -8,13 +8,18 @@ from interfaces.srv import ControlSolver
 import numpy as np
 from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge
-from .data_aug import resize_image, crop_image
+from .data_aug import crop_image, plot_predictions_on_image
 import torch 
 from torchvision import transforms
 import torch.nn as nn
 import torchvision.models as models
 import cv2
 from PIL import Image
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from mpl_toolkits.mplot3d import Axes3D
+# from .plot_tools import plot_predictions_on_image
+
 
 # Future todo:
 # - add mpc logic (uses mocap data)
@@ -30,12 +35,50 @@ class VisuomotorNode(Node):
         self.controller_type = self.get_parameter('controller_type').value
         self.debug = self.get_parameter('debug').value
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
-        self.best_model_path = 'data/models/visuomotor/object_rb_regression_small/best_model.pth'
+        self.best_model_path = 'data/models/visuomotor/object_mocap_rb_regression/best_model.pth'
         self.latest_image = None
         self.model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
         self.bridge = CvBridge()
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
         self.recording_folder = os.path.join(self.data_dir, 'images')
+        self.x3 = 0.01
+        self.z3 = 0.01
+        
+
+        # Initialize 3D plot
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        # Set initial positions (replace with your desired values)
+        self.plotter_positions = [
+            [0.0, -0.1, 0.0],
+            [0.0,  -0.2, 0.0],
+            [0.0, -0.32, 0.0]
+        ]
+    
+
+        # Create scatter plots
+        self.scatter1 = self.ax.scatter([], [], [], label='Disk 1')
+        self.scatter2 = self.ax.scatter([], [], [], label='Disk 2')
+        self.scatter3 = self.ax.scatter([], [], [], label='Disk 3')
+
+        # set plot settings
+        # Set axes limits and labels to match the desired orientation
+        self.ax.set_xlim(-.2, .2)
+        self.ax.set_ylim(-.2, .2)
+        self.ax.invert_yaxis()
+        self.ax.set_zlim(-.32, 0)
+        self.ax.set_xlabel('X', labelpad=20)
+        self.ax.set_ylabel('Z', labelpad=20)
+        self.ax.invert_yaxis()
+        self.ax.set_zlabel('Y', labelpad=20)
+        self.ax.set_title('Disk Positions in Real Time (3D)')
+        self.ax.legend()
+        # Adjust the view to match the desired axis orientation
+        self.ax.view_init(elev=45, azim=285)
+
+        # Start the animation
+        plt.ion()
+        plt.show()
 
         # define transformations
         self.transform = transforms.Compose([
@@ -44,7 +87,6 @@ class VisuomotorNode(Node):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
-
 
         # load the ResNet
         self.model = self.load_model(self.model, self.best_model_path) 
@@ -77,6 +119,37 @@ class VisuomotorNode(Node):
         self._timer = self.create_timer(1.0 / 10.0, self.vm_callback)
         self.get_logger().info('Visuomotor node has been started.')
 
+    def update_plot(self):
+        # Unpack positions into separate lists
+        x = [pos[0] for pos in self.plotter_positions]
+        y = [pos[1] for pos in self.plotter_positions]
+        z = [pos[2] for pos in self.plotter_positions]
+
+        # Clear previous scatter plots
+        self.ax.clear()
+
+        # Create new scatter plots with updated data
+        self.scatter1 = self.ax.scatter(x[0], y[0], z[0], label='Disk 1')
+        self.scatter2 = self.ax.scatter(x[1], y[1], z[1], label='Disk 2')
+        self.scatter3 = self.ax.scatter(x[2], y[2], z[2], label='Disk 3')
+
+        # Set plot limits and labels
+        self.ax.set_xlim(-0.3, 0.3)
+        self.ax.set_ylim(-0.3, 0.3)
+        self.ax.invert_yaxis()
+        self.ax.set_zlim(-0.32, 0)
+        self.ax.set_xlabel('X', labelpad=20)
+        self.ax.set_ylabel('Z', labelpad=20)
+        self.ax.set_zlabel('Y', labelpad=20)
+        self.ax.set_title('Disk Positions in Real Time (3D)')
+        self.ax.legend()
+        self.ax.view_init(elev=45, azim=285)
+
+        # Redraw the plot
+        self.fig.canvas.draw_idle()
+        plt.pause(0.001)  # Short pause for responsiveness
+
+
     def vm_callback(self):
         # do inference at 10Hz
         if self.latest_image != None: #wait for an image to exist on the topic
@@ -84,7 +157,7 @@ class VisuomotorNode(Node):
 
             trunk_rigid_bodies_msg = self.convert_model_positions_to_trunk_rigid_bodies(vm_positions)
             if self.debug:
-                self.get_logger().info(f'Published VM desired positions {vm_positions}')
+                self.get_logger().info(f'VM model desired positions {vm_positions}')
             
             # Controller
             # Create request
@@ -92,10 +165,14 @@ class VisuomotorNode(Node):
 
             # Populate request with desired positions from teleop
             zf = np.array([coord for pos in trunk_rigid_bodies_msg.positions for coord in [pos.x, pos.y, pos.z]])
+            self.plotter_positions = np.reshape(zf, (3, 3)).tolist()
+            self.update_plot()
 
             # Center data around zero
             settled_positions = np.array([0, -0.10665, 0, 0, -0.20432, 0, 0, -0.320682, 0])
             zf_centered = zf - settled_positions
+            self.x3 = zf_centered[6]
+            self.z3 = zf_centered[8]
             request.zf = zf_centered.tolist()
 
             # Call the control service
@@ -107,7 +184,7 @@ class VisuomotorNode(Node):
         try:
             response = async_response.result()
             # self.get_logger().info('got a response')
-            self.publish_control_inputs(response.uopt)
+            self.publish_control_inputs(response.uopt) #UNCOMMENT THIS
         except Exception as e:
             self.get_logger().error(f'Service call failed: {e}.')
 
@@ -149,9 +226,12 @@ class VisuomotorNode(Node):
         # convert to cv2
         cv2_img = self.bridge.compressed_imgmsg_to_cv2(latest_image_msg, "rgb8") #replace with imgmsg_to_cv2 for non-compressed img
 
-        # img_name = 'sample.jpg'
-        # img_filename = os.path.join(self.recording_folder, img_name)
-        # cv2.imwrite(img_filename, cv2.cvtColor(cv2_img, cv2.COLOR_RGB2BGR))
+        img_name = 'sample.jpg'
+        img_filename = os.path.join(self.recording_folder, img_name)
+        cv2.imwrite(img_filename, cv2.cvtColor(cv2_img, cv2.COLOR_RGB2BGR))
+
+        processed_data_dir = 'data/trajectories/teleop/mocap_rb/processed/single_img_regression_mocap_rb.csv'
+        #plot_predictions_on_image(self.x3, self.z3, img_filename, processed_data_dir)
 
         # crop image
         cropped_img = crop_image(cv2_img, left_pct=0.08, right_pct=0.05, top_pct=0, bottom_pct=0)
@@ -186,7 +266,7 @@ class VisuomotorNode(Node):
 
         # Extract the coordinates from the tensor
         x1, y1, z1, x2, y2, z2, x3, y3, z3 = model_positions[0].tolist()
-        self.get_logger().info(f'model_positions[0] = {model_positions[0]}')
+        #self.get_logger().info(f'model_positions[0] = {model_positions[0]}')
 
         # Create a ROS message
         msg = TrunkRigidBodies()
@@ -202,6 +282,7 @@ def main(args=None):
     rclpy.init(args=args)
     visuomotor_node = VisuomotorNode()
     rclpy.spin(visuomotor_node)
+
     visuomotor_node.destroy_node()
     rclpy.shutdown()
 

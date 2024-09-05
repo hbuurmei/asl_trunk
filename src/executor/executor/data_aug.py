@@ -2,6 +2,10 @@ import cv2
 import numpy as np
 import os
 import random
+#import os
+import matplotlib.pyplot as plt
+from PIL import Image
+import pandas as pd
 
 def resize_image(image, target_size=(1080, 1080)):
     return cv2.resize(image, target_size)
@@ -109,3 +113,79 @@ def augment_image(image_path, output_dir):
 
     # return augmented filename
     return f"{name}_augmented{ext}"
+
+def convert_to_pillow_coords(df, img_width, img_height, x_min, x_max, z_min, z_max):
+    """
+    Convert robot coordinates to Pillow image coordinates.
+
+    Parameters:
+    df (pd.DataFrame): DataFrame containing 'x' and 'z' columns in robot coordinates.
+    img_width, img_height (int): Dimensions of the Pillow image.
+
+    Returns:
+    pd.DataFrame: DataFrame with 'img_x' and 'img_y' columns for Pillow image coordinates.
+    """
+
+    # Calculate the scaling factors for x and z coordinates
+    x_scale = img_width / (x_max - x_min)
+    z_scale = img_height / (z_max - z_min)
+
+    # Calculate the shifts to center the robot's origin within the image
+    x_shift = (x_max + x_min) / 2
+    z_shift = (z_max + z_min) / 2
+
+    # Convert robot coordinates to Pillow image coordinates
+    df['img_x'] = (df['x'] - x_shift) * x_scale + img_width / 2
+    df['img_y'] = (df['z'] - z_shift) * z_scale + img_height / 2
+
+    # Invert the y-axis and x-axis to match Pillow's coordinate system (where (0, 0) is top-left)
+    df['img_y'] = img_height - df['img_y']
+    df['img_x'] = img_width - df['img_x']
+
+    return df[['img_x', 'img_y']]
+
+def plot_predictions_on_image(x3, z3, image_path, dataset_file):
+    """
+    Plot ground truth and predicted tip positions on images.
+
+    Parameters:
+    results (list): List of dictionaries containing img_filename, true_x, true_z, pred_x, pred_z
+    data_dir (str): Directory containing the images.
+    """
+    
+    # Open the image
+    with Image.open(image_path) as img:
+        img_width, img_height = img.size
+
+        # Convert ground truth and predicted coordinates to image coordinates
+        positions_df = pd.read_csv(dataset_file)
+
+
+        # Convert entire DataFrame coordinates to Pillow image coordinates once
+        overall_df = positions_df[['x3', 'z3']].rename(columns={'x3': 'x', 'z3': 'z'})
+
+        #calculate extent of dataset for scaling to pillow coords
+        x_min, x_max = overall_df['x'].min() - 0.01, overall_df['x'].max() + 0.01
+        z_min, z_max = overall_df['z'].min() - 0.01, overall_df['z'].max() + 0.01
+
+        pred_img_coords = convert_to_pillow_coords(pd.DataFrame({'x': [x3], 'z': [z3]}), img_width, img_height,  x_min, x_max, z_min, z_max)
+
+        # Create a figure with the same dimensions as the image
+        fig, ax = plt.subplots(figsize=(img_width / 100, img_height / 100), dpi=100)
+
+        # Plot the image
+        ax.imshow(img)
+
+        # Plot the predicted tip position
+        ax.scatter([pred_img_coords['img_x'][0]], [pred_img_coords['img_y'][0]], color='red', s=200, label='Prediction')
+
+        # Remove axes for a cleaner output
+        ax.axis('off')
+
+        # Add a legend
+        ax.legend()
+
+        # Save the image with the original dimensions
+        output_filename = os.path.join("data/images/predicted_sample.jpg")
+        plt.savefig(output_filename, bbox_inches='tight', pad_inches=0)
+        plt.close(fig)
