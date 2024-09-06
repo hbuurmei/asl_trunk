@@ -13,7 +13,7 @@ class IKSolverNode(Node):
             ('y2u_file', 'y2u.npy'),
             ('u_min', -0.25),
             ('u_max', 0.25),
-            ('du_max', 0.05),
+            ('du_max', 0.04),
             ('limit_delta', False), # False or True -- if limit_delta, constrains the difference in u between timesteps'
             ('tip_only', False)     # False or True -- 
         ])
