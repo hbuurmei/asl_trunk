@@ -15,17 +15,21 @@ class AVPStreamerNode(Node):
         super().__init__('avp_streamer_node')
         self.declare_parameters(namespace='', parameters=[
             ('debug', False),                               # False or True
-            ('recording_name', 'test_task_recording')
+            ('recording_name', 'test_task_recording'),
+            ('mocap_type', 'rigid_bodies')                  # 'rigid_bodies' or 'markers' - always going to be 'rigid_bodies' for now
         ])
 
         self.debug = self.get_parameter('debug').value
+        self.mocap_type = self.get_parameter('mocap_type').value
         self.recording_name = self.get_parameter('recording_name').value
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
-        self.recording_file = os.path.join(self.data_dir, f'trajectories/teleop/single/{self.recording_name}.csv')
+        self.recording_file = os.path.join(self.data_dir, f'trajectories/teleop/mocap_rb/{self.recording_name}.csv')
         self.img_filename = None
         self.client = self.create_client(TriggerImageSaving, 'trigger_image_saving')
         # while not self.client.wait_for_service(timeout_sec=1.0):
             # self.get_logger().info('Image saving service not yet available, waiting...')
+        self.latest_mocap_positions = None 
+        self.rigid_body_names = ["1", "2", "3"]
 
         # Initialize stored positions and gripper states
         self.stored_positions = []
@@ -39,10 +43,21 @@ class AVPStreamerNode(Node):
             '/avp_des_positions',
             QoSProfile(depth=10)
         )
+        
+        # subscribe to mocap positions
+        self.subscription_rigid_bodies = self.create_subscription(
+                TrunkRigidBodies,
+                '/trunk_rigid_bodies',
+                self.mocap_listener_callback,
+                QoSProfile(depth=10)
+            )
 
         self.streamer = AVPSubscriber(ip='10.93.181.122')
-        self._timer = self.create_timer(1.0 / 10.0, self.streamer_data_sampling_callback)
+        self._timer = self.create_timer(1.0 / 10.0, self.streamer_data_sampling_callback) # runs at 10Hz
         self.get_logger().info('AVP streaming node has been started.')
+
+    def mocap_listener_callback(self, msg):
+        self.latest_mocap_positions = msg
 
 
     def streamer_data_sampling_callback(self):
@@ -58,10 +73,15 @@ class AVPStreamerNode(Node):
         # self.get_logger().info(f'Current: {self.streamer.isRecording}, previous: {self.streamer.previousRecordingState}')
 
         avp_positions = self.streamer.get_latest()
-        trunk_rigid_bodies_msg = self.convert_avp_positions_to_trunk_rigid_bodies(avp_positions)
+        avp_rigid_bodies_msg = self.convert_avp_positions_to_trunk_rigid_bodies(avp_positions)
+        
+        # save real rigid body positions
+        trunk_rigid_bodies_msg = self.latest_mocap_positions
+        print(self.latest_mocap_positions)
         self.stored_positions.append(trunk_rigid_bodies_msg.positions)
+
         self.stored_gripper_states.append(self.streamer.isGripperOpen)
-        self.avp_publisher.publish(trunk_rigid_bodies_msg)
+        self.avp_publisher.publish(avp_rigid_bodies_msg)
         if self.debug:
             self.get_logger().info(f'Published AVP desired positions {avp_positions}.')
 
@@ -78,7 +98,6 @@ class AVPStreamerNode(Node):
         msg = TrunkRigidBodies()
 
         # Extract rigid body names and positions
-        self.rigid_body_names = ["1", "2", "3"]
         positions_list = [
             avp_positions['disk_positions'].get(f'disk{name}', [0, 0, 0]) for name in self.rigid_body_names
         ]
