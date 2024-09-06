@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd  # type: ignore
 
 
-def single_random_trajectory():
+def random_trajectory():
     # Parameters
     n_u = 6
     sample_interval = 1   # [s]
@@ -45,54 +45,49 @@ def single_random_trajectory():
 
     # Concatenate all DataFrames into a single DataFrame
     df_combined = pd.concat(dfs, ignore_index=True)
-    return df
+    return df_combined
 
 
-def several_sine_trajectories():
+def sine_trajectory():
     # Parameters
     n_u = 6
-    sample_interval = 1  # [s]
-    total_duration = 150  # [s]
+    num_cycles = 4  # number of cycles per control
     sampling_rate = 100  # [Hz]
-    u_min, u_max = -0.35, 0.35
+    period = 5  # [s], period of the sine wave
+    max_amp = 0.35  # maximum amplitude of the sine wave
+    gamma = 0.8  # decrease amplitude with this factor
 
-    # Number of samples
-    num_samples = total_duration // sample_interval
-    total_samples = total_duration * sampling_rate
+    ts = np.arange(0, period, 1/sampling_rate)
 
-    # Randomly sample control inputs at the specified interval
-    us_rnd = np.random.uniform(u_min, u_max, (num_samples, n_u))
-
-    # Time vector for interpolation
-    ts = np.arange(0, total_duration, 1/sampling_rate)
-
-    # Interpolated
-    us_interp = np.zeros((total_samples, n_u))
-    for i in range(n_u):
-        us_interp[:, i] = np.interp(ts, np.arange(0, total_duration, sample_interval), us_rnd[:, i])
-
-    IDs = np.arange(total_samples)
-    df = pd.DataFrame(us_interp, columns=[f'u{i+1}' for i in range(n_u)])
+    u_order = [0, 5, 1, 4, 2, 3]
+    us_sine = np.zeros((len(ts)*num_cycles*n_u, n_u))
+    for u_i in u_order:
+        amplitude = max_amp
+        for cycle_i in range(num_cycles):
+            start_index = u_i * len(ts) * num_cycles + cycle_i * len(ts)
+            end_index = start_index + len(ts)
+            
+            us_sine[start_index:end_index, u_i] = amplitude * np.sin(2 * np.pi * ts / period)
+            amplitude *= gamma
+    
+    IDs = np.arange(len(ts)*num_cycles*n_u)
+    df = pd.DataFrame(us_sine, columns=[f'u{i+1}' for i in range(n_u)])
 
     df['ID'] = IDs
     df = df[['ID'] + [f'u{i+1}' for i in range(n_u)]]
     return df
 
 
-
-
-
 def main(control_inputs_file, control_type):
     if control_type == 'random':
-        df = single_random_trajectory()
+        df = random_trajectory()
     elif control_type == 'sinusoidal':
-        df = several_sine_trajectories()
+        df = sine_trajectory()
     df.to_csv(control_inputs_file, index=False)
+
 
 if __name__ == '__main__':
     control_type = 'sinusoidal'
-    
-    # Get desired file location
     data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
     control_inputs_file = os.path.join(data_dir, f'trajectories/dynamic/control_inputs_controlled_{control_type}.csv')
-    main(control_inputs_file, control_type='random')
+    main(control_inputs_file, control_type=control_type)

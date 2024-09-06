@@ -65,7 +65,7 @@ class DataCollectionNode(Node):
             self.subscription_markers = self.create_subscription(
                 TrunkMarkers,
                 '/trunk_markers',
-                self.listener_callback,
+                self.listener_callback, 
                 QoSProfile(depth=10)
             )
         elif self.mocap_type == 'rigid_bodies':

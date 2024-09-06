@@ -15,7 +15,7 @@ class ImageStoringNode(Node):
         # if you want the non-compressed image, use Image and /image_raw as arguments above instead
         self.bridge = CvBridge()
         self.data_dir = os.getenv('TRUNK_DATA', '/home/asl/Documents/asl_trunk_ws/data')
-        self.recording_folder = os.path.join(self.data_dir, 'trajectories/teleop/single/images')
+        self.recording_folder = os.path.join(self.data_dir, 'trajectories/teleop/mocap_rb/images')
         self.sample_id = 0 # need to match sample ID here and in streamer node
         self.service = self.create_service(TriggerImageSaving, 'trigger_image_saving', self.handle_trigger_image_saving)
         self.get_logger().info('Image saving service has been created.')
