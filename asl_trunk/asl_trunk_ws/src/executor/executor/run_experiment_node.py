@@ -47,6 +47,14 @@ class RunExperimentNode(Node):
                 self.mocap_listener_callback,
                 QoSProfile(depth=10)
             )
+            # Create control solver service client
+            self.client = self.create_client(
+                ControlSolver,
+                'mpc_solver'
+            )
+            # Wait for service to become available
+            while not self.client.wait_for_service(timeout_sec=1.0):
+                self.get_logger().info('Service not available, waiting...')
         elif self.controller_type == 'ik':
             # Create control solver service client
             self.client = self.create_client(
