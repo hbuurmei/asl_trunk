@@ -1,11 +1,59 @@
-import os
-import numpy as np
-import rclpy  # type: ignore
-from rclpy.node import Node  # type: ignore
-from rclpy.qos import QoSProfile  # type: ignore
-from interfaces.msg import SingleMotorControl, AllMotorsControl, TrunkMarkers, TrunkRigidBodies
+import jax
+import jax.numpy as jnp
+import rclpy                        # type: ignore
+from rclpy.node import Node         # type: ignore
+from rclpy.qos import QoSProfile    # type: ignore
+from scipy.interpolate import interp1d
 from interfaces.srv import ControlSolver
 from controller.mpc.gusto import GuSTO
+
+
+def run_mpc_solver_node(model, config, x0, t=None, dt=None, z=None, u=None, zf=None,
+                       U=None, X=None, Xf=None, dU=None, **kwargs):
+    """
+    Function that builds a ROS node to run MPC and runs it continuously. This node
+    provides a service that at each query will run MPC once.
+
+    :model: the model
+    :config: GuSTOConfig object with parameters for GuSTO
+    :x0: initial condition (n_x,)
+    :t: (optional) desired trajectory time vector (M,), required if z or u variables are
+                   2D arrays, used for interpolation of z and u
+    :z: (optional) desired tracking trajectory for objective function. Can either be array
+                   of size (M, n_z) to correspond to t, or can be a constant 1D array (n_z,)
+    :u: (optional) desired control for objective function. Can either be array of size (M, n_u)
+                   to correspond to t, or it can be a constant 1D array (n_u,)
+    :zf: (optional) terminal target state (n_z,), defaults to 0 if Qzf provided
+    :U: (optional) control constraint (Polyhedron object)
+    :X: (optional) state constraint (Polyhedron object)
+    :Xf: (optional) terminalstate constraint (Polyhedron object)
+    :dU: (optional) u_k - u_{k-1} constraint Polyhedron object
+    :kwargs: (optional): Keyword args for GuSTO (see gusto.py GuSTO __init__.py and and optionally for the solver
+    (https://osqp.org/docs/interfaces/solver_settings.html)
+    """
+    assert t is not None or dt is not None, "Either t array or dt must be provided."
+    rclpy.init()
+    node = MPCSolverNode(model, config, x0, t=t, dt=dt, z=z, u=u, zf=zf,
+                           U=U, X=X, Xf=Xf, dU=dU, **kwargs)
+    rclpy.spin(node)
+    rclpy.shutdown()
+
+
+def arr2jnp(x, dim, squeeze=False):
+    """
+    Converts python list to (-1, dim) shape jax numpy array
+    """
+    if squeeze:
+        return jnp.asarray(x, dtype='float64').reshape(-1, dim).squeeze()
+    else:
+        return jnp.asarray(x, dtype='float64').reshape(-1, dim)
+
+
+def jnp2arr(x):
+    """ 
+    Converts from jax numpy array to python list.
+    """
+    return x.flatten().tolist()
 
 
 class MPCSolverNode(Node):
@@ -13,20 +61,13 @@ class MPCSolverNode(Node):
     Defines a service provider node that will run the GuSTO MPC implementation.
     """
 
-    def __init__(self, model, N, dt, Qz, R, x0, t=None, z=None, u=None, Qzf=None, zf=None,
-                 U=None, X=None, Xf=None, dU=None, verbose=0, warm_start=True, **kwargs):
+    def __init__(self, model, config, x0, t=None, dt=None, z=None, u=None, zf=None,
+                 U=None, X=None, Xf=None, dU=None, **kwargs):
         self.model = model
-        self.N = N
-        self.dt = dt
-
-        # Get characteristic values for GuSTO scaling
-        x_char, f_char = self.model.get_characteristic_vals()
-
-        # Define cost function matrices
-        self.Qzf = Qzf
+        if dt is None and t is not None:
+            self.dt = t[1] - t[0]
 
         # Define target values
-        self.t = t
         self.z = z
         self.u = u
         if z is not None and z.ndim == 2:
@@ -38,15 +79,13 @@ class MPCSolverNode(Node):
                                      bounds_error=False, fill_value=(u[0, :], u[-1, :]))
 
         # Set up GuSTO and run first solve with a simple initial guess
-        u_init = np.zeros((self.N, self.model.n_u))
+        u_init = jnp.zeros((config.N, self.model.n_u))
         x_init, _ = self.model.rollout(x0, u_init, self.dt)
         z, zf, u = self.get_target(0.0)
-        self.gusto = GuSTO(model, N, dt, Qz, R, x0, u_init, x_init, z=z, u=u,
-                           Qzf=Qzf, zf=zf, U=U, X=X, Xf=Xf, dU=dU,
-                           verbose=verbose, warm_start=warm_start,
-                           x_char=x_char, f_char=f_char, **kwargs)
+        self.gusto = GuSTO(model, config, x0, u_init, x_init, z=z, u=u,
+                           zf=zf, U=U, X=X, Xf=Xf, dU=dU, **kwargs)
         self.xopt, self.uopt, _, _ = self.gusto.get_solution()
-        self.topt = self.dt * np.arange(self.N + 1)
+        self.topt = self.dt * jnp.arange(self.N + 1)
 
         # Initialize the ROS node
         super().__init__('mpc_solver_node')
@@ -64,13 +103,13 @@ class MPCSolverNode(Node):
         t, xopt, uopt, zopt
         """
         t0 = request.t0
-        x0 = arr2np(request.x0, self.model.n_x, squeeze=True)
+        x0 = arr2jnp(request.x0, self.model.n_x, squeeze=True)
 
         # Get target values at proper times by interpolating
         z, zf, u = self.get_target(t0)
 
         # Get initial guess
-        idx0 = np.argwhere(self.topt >= t0)[0, 0]
+        idx0 = jnp.argwhere(self.topt >= t0)[0, 0]
         u_init = self.uopt[-1, :].reshape(1, -1).repeat(self.N, axis=0)
         u_init[0:self.N - idx0] = self.uopt[idx0:, :]
         x_init = self.xopt[-1, :].reshape(1, -1).repeat(self.N + 1, axis=0)
@@ -80,20 +119,20 @@ class MPCSolverNode(Node):
         self.gusto.solve(x0, u_init, x_init, z=z, zf=zf, u=u)
         self.xopt, self.uopt, zopt, t_solve = self.gusto.get_solution()
 
-        self.topt = t0 + self.dt * np.arange(self.N + 1)
-        response.t = np2arr(self.topt)
-        response.xopt = np2arr(self.xopt)
-        response.uopt = np2arr(self.uopt)
-        response.zopt = np2arr(zopt)
+        self.topt = t0 + self.dt * jnp.arange(self.N + 1)
+        response.t = jnp2arr(self.topt)
+        response.xopt = jnp2arr(self.xopt)
+        response.uopt = jnp2arr(self.uopt)
+        response.zopt = jnp2arr(zopt)
         response.solve_time = t_solve
 
         return response
 
     def get_target(self, t0):
         """
-        Returns z, zf, u arrays for GuSTO solve
+        Returns z, zf, u arrays for GuSTO solve.
         """
-        t = t0 + self.dt * np.arange(self.N + 1)
+        t = t0 + self.dt * jnp.arange(self.N + 1)
 
         # Get target z terms for cost function
         if self.z is not None:
@@ -122,12 +161,62 @@ class MPCSolverNode(Node):
         return z, zf, u
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    mpc_solver_node = MPCSolverNode()
-    rclpy.spin(mpc_solver_node)
-    mpc_solver_node.destroy_node()
-    rclpy.shutdown()
+class MPCClientNode(Node):
+    """
+    The client side of the MPC service. This object is used to query
+    the ROS node to solve a GuSTO problem.
 
-if __name__ == '__main__':
-    main()
+    Once a MPCSolverNode is running, instantiate this object and then use
+    send_request to send a query the GuSTO solver.
+    """
+
+    def __init__(self):
+        rclpy.init()
+        super().__init__('mpc_client')
+        self.cli = self.create_client(ControlSolver, 'mpc_solver')
+
+        # Wait until the solver node is up and running
+        while not self.cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('MPC solver not available, waiting...')
+
+        # Request message definition
+        self.req = ControlSolver.Request()
+
+    def send_request(self, t0, x0, wait=True):
+        """
+        :param t0:
+        :param x0:
+        :param wait: Boolean
+        :return:
+        """
+        self.req.t0 = t0
+        self.req.x0 = jnp2arr(x0)
+
+        self.future = self.cli.call_async(self.req)
+
+        if wait:
+            # Synchronous call, not compatible for real-time applications
+            rclpy.spin_until_future_complete(self, self.future)
+
+    def force_spin(self):
+        if not self.check_if_done():
+            rclpy.spin_once(self, timeout_sec=0)
+
+    def check_if_done(self):
+        return self.future.done()
+
+    def force_wait(self):
+        self.get_logger().warning('Overrides realtime compatibility, solve is too slow. Consider modifying problem')
+        rclpy.spin_until_future_complete(self, self.future)
+
+    def get_solution(self, n_x, n_u):
+        """
+        Obtain result from MPC solver.
+        """
+        res = self.future.result()
+        t = arr2jnp(res.t, 1, squeeze=True)
+        xopt = arr2jnp(res.xopt, n_x)
+        uopt = arr2jnp(res.uopt, n_u)
+        t_solve = res.solve_time
+
+        return t, uopt, xopt, t_solve
