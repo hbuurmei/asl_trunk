@@ -58,7 +58,7 @@ class GuSTO:
     """
     def __init__(self, model, config, x0, u_init, x_init,
                 z=None, u=None, zf=None, U=None, X=None, Xf=None, dU=None,
-                warm_start=True, **kwargs):
+                **kwargs):
         self.model = model
 
         # Extract configuration parameters
@@ -101,7 +101,7 @@ class GuSTO:
         # Initialize LOCP
         self.locp = LOCP(self.N, self.H, self.Qz, self.R, Qzf=self.Qzf,
                          U=self.U, X=self.X, Xf=self.Xf, dU=self.dU,
-                         verbose=locp_verbose, warm_start=warm_start, x_char=self.x_char,
+                         verbose=locp_verbose, warm_start=self.warm_start, x_char=self.x_char,
                          nonlinear_perf_mapping=self.nonlinear_perf_mapping, **kwargs)
 
         # First SCP solve
