@@ -24,8 +24,6 @@ nav:
     - Software: software_design.md 
   - Robot Setup:
     - 3D Printing: 3dprinting.md 
-    - Electrical Wiring: electrical_wiring.md 
-    - Tendon Routing: tendon_routing.md 
     - OpiTrack System: optitrack.md 
   - Usage:
     - Motion Capture: mocap.md
@@ -33,6 +31,8 @@ nav:
     - Collecting data: collecting_data.md
     - Video Streaming: video_streaming.md
     - Telemetry Viewer: telemetry_viewer.md
+    - Teleoperation: teleoperation.md
+    - Visuomotor Rollout: visuomotor_rollout.md
   - Contributing: contributing.md
 
 markdown_extensions:

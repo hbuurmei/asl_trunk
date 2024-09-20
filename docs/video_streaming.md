@@ -6,12 +6,12 @@ To start the video stream, run the following command on the PI:
 ```bash
 cd cam_ws
 source install/setup.bash
-ros2 run v4l2_camera v4l2_camera_node
+ros2 run v4l2_camera v4l2_camera_node --ros-args -p image_size:=[1920,1080]
 ```
 This will start the video stream and publish the video data on the `/image` topic, and compressed video data on the `/image/compressed` topic.
 To alter for instance the frame rate or resolution, simply add the arguments as:
 ```bash
-ros2 run v4l2_camera v4l2_camera_node --ros-args -p image_width:=640 -p image_height:=480 -p framerate:=15
+ros2 run v4l2_camera v4l2_camera_node --ros-args -p image_size:=[1920,1080] -p framerate:=15
 ```
 
 To subscribe to the video stream, run the following command on the remote computer inside any ROS2 workspace:
